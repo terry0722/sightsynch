@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import Header from "../../../components/Header";
 import { supabase } from "../../../utils/supabase/client";
 
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
