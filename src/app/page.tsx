@@ -1,10 +1,9 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "../components/Header";
 import { supabase } from "../utils/supabase/client";
+
+export const revalidate = 0;
 
 interface Article {
   id: string;
@@ -43,76 +42,35 @@ const MOCK_ARTICLES: Article[] = [
   }
 ];
 
-const ArticleSkeleton = ({ isHero = false }: { isHero?: boolean }) => (
-  <div className={`animate-pulse flex flex-col justify-between h-full ${isHero ? "lg:pr-12" : ""}`}>
-    <div>
-      <div className={`relative w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200 ${isHero ? "aspect-[3/4]" : "aspect-[3/2]"}`} />
-      <div className="flex gap-3 items-center mb-4">
-        <div className="h-5 w-16 bg-neutral-200" />
-        <div className="h-4 w-20 bg-neutral-100" />
-      </div>
-      <div className="space-y-3 mb-6">
-        <div className="h-8 bg-neutral-200 w-11/12" />
-        <div className="h-8 bg-neutral-200 w-3/4" />
-      </div>
-      <div className="space-y-2 mb-8">
-        <div className="h-4 bg-neutral-100 w-full" />
-        <div className="h-4 bg-neutral-100 w-5/6" />
-      </div>
-    </div>
-    <div className="h-4 bg-neutral-200 w-24" />
-  </div>
-);
+export default async function Home() {
+  let articles: Article[] = [];
 
-export default function Home() {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  try {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  useEffect(() => {
-    let active = true;
+    // Check if error is a valid error object with actual content
+    const hasValidError = error && (
+      (error.message && typeof error.message === "string" && error.message.trim() !== "") ||
+      (error.code && typeof error.code === "string" && error.code.trim() !== "") ||
+      (Object.keys(error).length > 0)
+    );
 
-    async function fetchArticles() {
-      try {
-        const { data, error } = await supabase
-          .from("articles")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!active) return;
-
-        // Check if error is a valid error object with actual content
-        const hasValidError = error && (
-          (error.message && typeof error.message === "string" && error.message.trim() !== "") ||
-          (error.code && typeof error.code === "string" && error.code.trim() !== "") ||
-          (Object.keys(error).length > 0)
-        );
-
-        if (hasValidError) {
-          console.error("Failed to fetch articles from Supabase:", error);
-          setArticles(MOCK_ARTICLES);
-        } else if (!data || data.length === 0) {
-          console.warn("No articles returned from Supabase. Falling back to mock data.");
-          setArticles(MOCK_ARTICLES);
-        } else {
-          setArticles(data);
-        }
-      } catch (err) {
-        if (!active) return;
-        console.error("An unexpected error occurred while fetching articles:", err);
-        setArticles(MOCK_ARTICLES);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
+    if (hasValidError) {
+      console.error("Failed to fetch articles from Supabase:", error);
+      articles = MOCK_ARTICLES;
+    } else if (!data || data.length === 0) {
+      console.warn("No articles returned from Supabase. Falling back to mock data.");
+      articles = MOCK_ARTICLES;
+    } else {
+      articles = data;
     }
-
-    fetchArticles();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  } catch (err) {
+    console.error("An unexpected error occurred while fetching articles:", err);
+    articles = MOCK_ARTICLES;
+  }
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -124,7 +82,7 @@ export default function Home() {
       ));
     }
     if (typeof tags === "string") {
-      let parsed = [];
+      let parsed: string[] = [];
       try {
         const temp = JSON.parse(tags);
         if (Array.isArray(temp)) parsed = temp;
@@ -169,145 +127,128 @@ export default function Home() {
           </div>
         </div>
 
-        {loading ? (
-          /* Minimalist Skeleton Loading UI */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 border-b border-neutral-200 pb-12 lg:pb-20">
-            <div className="lg:col-span-7 lg:border-r border-neutral-200">
-              <ArticleSkeleton isHero={true} />
-            </div>
-            <div className="lg:col-span-5 lg:pl-12 flex flex-col gap-12 divide-y divide-neutral-200">
+        {/* Asymmetric Hero Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border-b border-neutral-200">
+          
+          {/* Left Column: Largest Main Article Card (col-span-7) */}
+          {heroArticle ? (
+            <article className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex flex-col justify-between group">
               <div>
-                <ArticleSkeleton isHero={false} />
+                {/* Image Container */}
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200">
+                  <Image
+                    src={heroArticle.image_url || "/hero_loreal_gucci.jpg"}
+                    alt={heroArticle.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 55vw"
+                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                    priority
+                  />
+                </div>
+
+                {/* Category & Tags */}
+                <div className="flex flex-wrap gap-3 items-center mb-4">
+                  {heroArticle.category && (
+                    <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
+                      {heroArticle.category}
+                    </span>
+                  )}
+                  {renderTags(heroArticle.tags)}
+                </div>
+
+                {/* Title */}
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
+                  {heroArticle.title}
+                </h1>
+
+                {/* Summary */}
+                <p className="text-base md:text-lg leading-relaxed text-neutral-600 font-normal max-w-2xl mb-8">
+                  {heroArticle.summary}
+                </p>
               </div>
-              <div className="pt-12">
-                <ArticleSkeleton isHero={false} />
+
+              {/* Read More Link */}
+              <div>
+                <Link 
+                  href={`/article/${heroArticle.id}`} 
+                  className="inline-flex items-center gap-2 text-sm font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
+                >
+                  READ ARTICLE
+                  <span className="text-xs">↗</span>
+                </Link>
               </div>
+            </article>
+          ) : (
+            <div className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
+              No Articles Available
             </div>
-          </div>
-        ) : (
-          /* Asymmetric Hero Grid */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border-b border-neutral-200">
-            
-            {/* Left Column: Largest Main Article Card (col-span-7) */}
-            {heroArticle ? (
-              <article className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex flex-col justify-between group">
-                <div>
-                  {/* Image Container */}
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200">
-                    <Image
-                      src={heroArticle.image_url || "/hero_loreal_gucci.jpg"}
-                      alt={heroArticle.title}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 55vw"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                      priority
-                    />
+          )}
+
+          {/* Right Column: 2 Medium Article Cards stacked (col-span-5) */}
+          <div className="lg:col-span-5 lg:pl-12 flex flex-col divide-y divide-neutral-200">
+            {sideArticles.length > 0 ? (
+              sideArticles.map((article, index) => (
+                <article 
+                  key={article.id} 
+                  className={`flex flex-col justify-between group ${
+                    index === 0 ? "pb-12 lg:pb-16 pt-12 lg:pt-0" : "pt-12 lg:pt-16 pb-12"
+                  }`}
+                >
+                  <div>
+                    {/* Image Container */}
+                    <div className="relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                      <Image
+                        src={article.image_url || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
+                        alt={article.title}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 40vw"
+                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                      />
+                    </div>
+
+                    {/* Category & Tags */}
+                    <div className="flex flex-wrap gap-3 items-center mb-3">
+                      {article.category && (
+                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
+                          {article.category}
+                        </span>
+                      )}
+                      {renderTags(article.tags)}
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
+                      {article.title}
+                    </h2>
+
+                    {/* Summary */}
+                    <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
+                      {article.summary}
+                    </p>
                   </div>
 
-                  {/* Category & Tags */}
-                  <div className="flex flex-wrap gap-3 items-center mb-4">
-                    {heroArticle.category && (
-                      <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                        {heroArticle.category}
-                      </span>
-                    )}
-                    {renderTags(heroArticle.tags)}
+                  {/* Read More Link */}
+                  <div>
+                    <Link 
+                      href={`/article/${article.id}`} 
+                      className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
+                    >
+                      READ ARTICLE
+                      <span className="text-[10px]">↗</span>
+                    </Link>
                   </div>
-
-                  {/* Title */}
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
-                    {heroArticle.title}
-                  </h1>
-
-                  {/* Summary */}
-                  <p className="text-base md:text-lg leading-relaxed text-neutral-600 font-normal max-w-2xl mb-8">
-                    {heroArticle.summary}
-                  </p>
-                </div>
-
-                {/* Read More Link */}
-                <div>
-                  <Link 
-                    href={`/article/${heroArticle.id}`} 
-                    className="inline-flex items-center gap-2 text-sm font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
-                  >
-                    READ ARTICLE
-                    <span className="text-xs">↗</span>
-                  </Link>
-                </div>
-              </article>
+                </article>
+              ))
             ) : (
-              <div className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
-                No Articles Available
+              <div className="py-12 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
+                No More Articles
               </div>
             )}
-
-            {/* Right Column: 2 Medium Article Cards stacked (col-span-5) */}
-            <div className="lg:col-span-5 lg:pl-12 flex flex-col divide-y divide-neutral-200">
-              {sideArticles.length > 0 ? (
-                sideArticles.map((article, index) => (
-                  <article 
-                    key={article.id} 
-                    className={`flex flex-col justify-between group ${
-                      index === 0 ? "pb-12 lg:pb-16 pt-12 lg:pt-0" : "pt-12 lg:pt-16 pb-12"
-                    }`}
-                  >
-                    <div>
-                      {/* Image Container */}
-                      <div className="relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
-                        <Image
-                          src={article.image_url || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
-                          alt={article.title}
-                          fill
-                          sizes="(max-width: 1024px) 100vw, 40vw"
-                          className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                        />
-                      </div>
-
-                      {/* Category & Tags */}
-                      <div className="flex flex-wrap gap-3 items-center mb-3">
-                        {article.category && (
-                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                            {article.category}
-                          </span>
-                        )}
-                        {renderTags(article.tags)}
-                      </div>
-
-                      {/* Title */}
-                      <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                        {article.title}
-                      </h2>
-
-                      {/* Summary */}
-                      <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
-                        {article.summary}
-                      </p>
-                    </div>
-
-                    {/* Read More Link */}
-                    <div>
-                      <Link 
-                        href={`/article/${article.id}`} 
-                        className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
-                      >
-                        READ ARTICLE
-                        <span className="text-[10px]">↗</span>
-                      </Link>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="py-12 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
-                  No More Articles
-                </div>
-              )}
-            </div>
           </div>
-        )}
+        </div>
 
         {/* Remaining Articles Grid */}
-        {!loading && extraArticles.length > 0 && (
+        {extraArticles.length > 0 && (
           <div className="border-t border-neutral-200 pt-16 mt-16">
             <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 mb-12">
               ARCHIVE / MORE ARTICLES
@@ -388,9 +329,9 @@ export default function Home() {
           
           {/* Footer Logo */}
           <div className="mb-12">
-            <a href="#" className="text-3xl font-black tracking-[0.15em] lowercase hover:opacity-80 transition-opacity">
+            <Link href="/" className="text-3xl font-black tracking-[0.15em] lowercase hover:opacity-80 transition-opacity">
               sightsynch
-            </a>
+            </Link>
           </div>
 
           {/* 6-Column Grid Layout */}
@@ -402,11 +343,11 @@ export default function Home() {
                 카테고리
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><a href="#apparel" className="hover:text-black transition-colors">패션</a></li>
-                <li><a href="#art" className="hover:text-black transition-colors">미술</a></li>
-                <li><a href="#audio" className="hover:text-black transition-colors">음향기기</a></li>
-                <li><a href="#beauty" className="hover:text-black transition-colors">뷰티</a></li>
-                <li><a href="#lifestyle" className="hover:text-black transition-colors">라이프스타일</a></li>
+                <li><Link href="/#apparel" className="hover:text-black transition-colors">패션</Link></li>
+                <li><Link href="/#art" className="hover:text-black transition-colors">미술</Link></li>
+                <li><Link href="/#audio" className="hover:text-black transition-colors">음향기기</Link></li>
+                <li><Link href="/#beauty" className="hover:text-black transition-colors">뷰티</Link></li>
+                <li><Link href="/#lifestyle" className="hover:text-black transition-colors">라이프스타일</Link></li>
               </ul>
             </div>
 
@@ -448,10 +389,10 @@ export default function Home() {
                 회사소개
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><a href="#newsroom" className="hover:text-black transition-colors">뉴스룸</a></li>
-                <li><a href="#careers" className="hover:text-black transition-colors">채용</a></li>
-                <li><a href="#partnership" className="hover:text-black transition-colors">광고 및 제휴</a></li>
-                <li><a href="#contact" className="hover:text-black transition-colors">연락처</a></li>
+                <li><Link href="/#newsroom" className="hover:text-black transition-colors">뉴스룸</Link></li>
+                <li><Link href="/#careers" className="hover:text-black transition-colors">채용</Link></li>
+                <li><Link href="/#partnership" className="hover:text-black transition-colors">광고 및 제휴</Link></li>
+                <li><Link href="/#contact" className="hover:text-black transition-colors">연락처</Link></li>
               </ul>
             </div>
 
@@ -528,9 +469,9 @@ export default function Home() {
               © 2026 Sightsynch Limited. All Rights Reserved.
             </p>
             <div className="flex gap-4 text-[10px] font-medium text-neutral-500 tracking-wider">
-              <a href="#terms" className="hover:text-black transition-colors">이용약관</a>
+              <Link href="/#terms" className="hover:text-black transition-colors">이용약관</Link>
               <span>|</span>
-              <a href="#privacy" className="hover:text-black transition-colors">개인정보처리방침</a>
+              <Link href="/#privacy" className="hover:text-black transition-colors">개인정보처리방침</Link>
             </div>
           </div>
 
