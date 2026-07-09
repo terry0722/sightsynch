@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "../../../components/Header";
 import { supabase } from "../../../utils/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 export const revalidate = 0;
 
@@ -57,64 +58,7 @@ export default async function ArticlePage({ params }: PageProps) {
     ));
   };
 
-  const renderMarkdown = (text: string) => {
-    if (!text) return null;
-    return text.split("\n\n").map((paragraph, index) => {
-      const trimmed = paragraph.trim();
-      if (!trimmed) return null;
 
-      // Handle headers
-      if (trimmed.startsWith("### ")) {
-        return (
-          <h4 key={index} className="text-lg font-black mt-8 mb-4 uppercase tracking-wide text-neutral-900 border-l-2 border-neutral-950 pl-3">
-            {trimmed.replace("### ", "")}
-          </h4>
-        );
-      }
-      if (trimmed.startsWith("## ")) {
-        return (
-          <h3 key={index} className="text-xl md:text-2xl font-black mt-12 mb-6 uppercase tracking-tight text-neutral-900">
-            {trimmed.replace("## ", "")}
-          </h3>
-        );
-      }
-      if (trimmed.startsWith("# ")) {
-        return (
-          <h2 key={index} className="text-2xl md:text-3xl font-black mt-16 mb-8 uppercase tracking-tight text-neutral-900">
-            {trimmed.replace("# ", "")}
-          </h2>
-        );
-      }
-
-      // Handle blockquotes
-      if (trimmed.startsWith("> ")) {
-        return (
-          <blockquote key={index} className="border-l-4 border-neutral-300 pl-6 my-8 italic text-neutral-600 text-lg leading-relaxed max-w-2xl mx-auto">
-            {trimmed.replace("> ", "")}
-          </blockquote>
-        );
-      }
-
-      // Handle bullet points
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        const items = trimmed.split(/\n[-*]\s/).map(item => item.replace(/^[-*]\s/, ""));
-        return (
-          <ul key={index} className="list-disc pl-6 space-y-3 mb-8 text-neutral-700 font-normal">
-            {items.map((item, i) => (
-              <li key={i} className="text-base md:text-lg leading-relaxed">{item}</li>
-            ))}
-          </ul>
-        );
-      }
-
-      // Standard paragraph
-      return (
-        <p key={index} className="text-base md:text-lg leading-relaxed text-neutral-700 mb-8 font-normal">
-          {trimmed}
-        </p>
-      );
-    });
-  };
 
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
@@ -178,7 +122,7 @@ export default async function ArticlePage({ params }: PageProps) {
         {/* Body Section Layout (Whitespace generous container) */}
         <section className="max-w-3xl mx-auto pb-16 border-b border-neutral-200">
           <div className="prose prose-neutral max-w-none">
-            {renderMarkdown(article.body_markdown)}
+            <ReactMarkdown>{article.body_markdown}</ReactMarkdown>
           </div>
         </section>
 
