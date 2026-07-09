@@ -130,45 +130,45 @@ export default function Header() {
 
             {/* Sub-menu Dropdown */}
             <div className="absolute top-[calc(100%-8px)] left-0 w-44 bg-white border border-neutral-200 shadow-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50">
-              <a 
-                href="#apparel" 
+              <Link 
+                href="/category/fashion" 
                 className="block px-5 py-3.5 text-xs font-semibold tracking-wider text-neutral-800 hover:bg-neutral-50 hover:text-black border-b border-neutral-100"
               >
                 의류
-              </a>
-              <a 
-                href="#shoes" 
+              </Link>
+              <Link 
+                href="/category/fashion" 
                 className="block px-5 py-3.5 text-xs font-semibold tracking-wider text-neutral-800 hover:bg-neutral-50 hover:text-black"
               >
                 신발
-              </a>
+              </Link>
             </div>
           </div>
 
-          <a 
-            href="#art" 
+          <Link 
+            href="/category/art" 
             className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
           >
             미술
-          </a>
-          <a 
-            href="#tech" 
+          </Link>
+          <Link 
+            href="/category/tech" 
             className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
           >
             테크
-          </a>
-          <a 
-            href="#beauty" 
+          </Link>
+          <Link 
+            href="/category/beauty" 
             className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
           >
             뷰티
-          </a>
-          <a 
-            href="#lifestyle" 
+          </Link>
+          <Link 
+            href="/category/lifestyle" 
             className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
           >
             라이프스타일
-          </a>
+          </Link>
         </nav>
 
         {/* Mobile Hamburger / X Button */}
@@ -217,14 +217,14 @@ export default function Header() {
             <div className="space-y-2">
               <span className="block text-neutral-400 text-xs tracking-widest font-black">패션</span>
               <div className="pl-4 flex flex-col space-y-2 text-xs text-neutral-600 font-semibold">
-                <a href="#apparel" className="hover:text-black">의류</a>
-                <a href="#shoes" className="hover:text-black">신발</a>
+                <Link href="/category/fashion" className="hover:text-black">의류</Link>
+                <Link href="/category/fashion" className="hover:text-black">신발</Link>
               </div>
             </div>
-            <a href="#art" className="hover:text-neutral-500 py-1 border-b border-neutral-100">미술</a>
-            <a href="#tech" className="hover:text-neutral-500 py-1 border-b border-neutral-100">테크</a>
-            <a href="#beauty" className="hover:text-neutral-500 py-1 border-b border-neutral-100">뷰티</a>
-            <a href="#lifestyle" className="hover:text-neutral-500 py-1">라이프스타일</a>
+            <Link href="/category/art" className="hover:text-neutral-500 py-1 border-b border-neutral-100">미술</Link>
+            <Link href="/category/tech" className="hover:text-neutral-500 py-1 border-b border-neutral-100">테크</Link>
+            <Link href="/category/beauty" className="hover:text-neutral-500 py-1 border-b border-neutral-100">뷰티</Link>
+            <Link href="/category/lifestyle" className="hover:text-neutral-500 py-1">라이프스타일</Link>
           </div>
 
           <hr className="border-neutral-200" />

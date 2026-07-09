@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "../../../components/Header";
@@ -5,33 +6,92 @@ import { supabase } from "../../../utils/supabase/client";
 
 export const revalidate = 0;
 
-interface PageProps {
-  params: Promise<{ id: string }>;
+interface Article {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  tags: string | string[];
+  image_url: string;
+  created_at?: string;
 }
 
-export default async function ArticlePage({ params }: PageProps) {
-  const { id } = await params;
+const CATEGORY_MAP: Record<string, { db: string; displayName: string }> = {
+  fashion: { db: "FASHION", displayName: "패션" },
+  art: { db: "ART", displayName: "미술" },
+  tech: { db: "TECH", displayName: "테크" },
+  beauty: { db: "BEAUTY", displayName: "뷰티" },
+  lifestyle: { db: "LIFESTYLE", displayName: "라이프스타일" },
+};
 
-  // Fetch the specific article
-  const { data: article, error } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("id", id)
-    .single();
+const MOCK_ARTICLES: Article[] = [
+  {
+    id: "mock-1",
+    title: "L’Oréal × Gucci: The New Synthesis of Luxury Beauty",
+    summary: "An exclusive editorial investigation into the intersection of heritage high-fashion couture and advanced cosmetic formulation, redefining luxury cosmetics for a new generation.",
+    category: "FASHION",
+    tags: ["로레알구찌"],
+    image_url: "/hero_loreal_gucci.jpg"
+  },
+  {
+    id: "mock-2",
+    title: "Abstract Symmetry: Kandinsky in the Digital Era",
+    summary: "Revisiting the geometric revolution of avant-garde modernism and its resonance in current immersive digital art experiences.",
+    category: "ART",
+    tags: ["모던아트"],
+    image_url: "/hero_modern_art.jpg"
+  },
+  {
+    id: "mock-3",
+    title: "The Acoustic Plexus: Minimalist Sound Design",
+    summary: "Crafting pure soundscapes through mechanical precision and understated industrial architecture in wireless audio.",
+    category: "TECH",
+    tags: ["무선헤드폰"],
+    image_url: "/hero_minimal_headphones.jpg"
+  }
+];
 
-  // If error or no article is found, trigger notFound
-  if (error || !article) {
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function CategoryPage({ params }: PageProps) {
+  const { slug } = await params;
+  const lowerSlug = slug.toLowerCase();
+
+  const categoryInfo = CATEGORY_MAP[lowerSlug];
+  if (!categoryInfo) {
     notFound();
   }
 
-  // Format date elegantly
-  const formattedDate = article.created_at
-    ? new Date(article.created_at).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-    : "";
+  let articles: Article[] = [];
+
+  try {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("*")
+      .eq("category", categoryInfo.db)
+      .order("created_at", { ascending: false });
+
+    const hasValidError = error && (
+      (error.message && typeof error.message === "string" && error.message.trim() !== "") ||
+      (error.code && typeof error.code === "string" && error.code.trim() !== "") ||
+      (Object.keys(error).length > 0)
+    );
+
+    if (hasValidError) {
+      console.error(`Failed to fetch articles for category ${categoryInfo.db}:`, error);
+      articles = MOCK_ARTICLES.filter(a => a.category === categoryInfo.db);
+    } else if (!data || data.length === 0) {
+      console.warn(`No articles returned for category ${categoryInfo.db}. Using fallback if available.`);
+      articles = MOCK_ARTICLES.filter(a => a.category === categoryInfo.db);
+    } else {
+      articles = data;
+    }
+  } catch (err) {
+    console.error("An unexpected error occurred while fetching articles:", err);
+    articles = MOCK_ARTICLES.filter(a => a.category === categoryInfo.db);
+  }
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -50,69 +110,10 @@ export default async function ArticlePage({ params }: PageProps) {
       parsed = [tags];
     }
     return parsed.map((tag) => (
-      <span key={tag} className="text-xs font-mono tracking-wider text-neutral-500 bg-neutral-50 border border-neutral-200 px-3 py-1.5 hover:bg-neutral-100 hover:text-black transition-colors cursor-pointer">
+      <span key={tag} className="text-xs font-mono tracking-wider text-neutral-500">
         #{tag.replace(/^#/, "")}
       </span>
     ));
-  };
-
-  const renderMarkdown = (text: string) => {
-    if (!text) return null;
-    return text.split("\n\n").map((paragraph, index) => {
-      const trimmed = paragraph.trim();
-      if (!trimmed) return null;
-
-      // Handle headers
-      if (trimmed.startsWith("### ")) {
-        return (
-          <h4 key={index} className="text-lg font-black mt-8 mb-4 uppercase tracking-wide text-neutral-900 border-l-2 border-neutral-950 pl-3">
-            {trimmed.replace("### ", "")}
-          </h4>
-        );
-      }
-      if (trimmed.startsWith("## ")) {
-        return (
-          <h3 key={index} className="text-xl md:text-2xl font-black mt-12 mb-6 uppercase tracking-tight text-neutral-900">
-            {trimmed.replace("## ", "")}
-          </h3>
-        );
-      }
-      if (trimmed.startsWith("# ")) {
-        return (
-          <h2 key={index} className="text-2xl md:text-3xl font-black mt-16 mb-8 uppercase tracking-tight text-neutral-900">
-            {trimmed.replace("# ", "")}
-          </h2>
-        );
-      }
-
-      // Handle blockquotes
-      if (trimmed.startsWith("> ")) {
-        return (
-          <blockquote key={index} className="border-l-4 border-neutral-300 pl-6 my-8 italic text-neutral-600 text-lg leading-relaxed max-w-2xl mx-auto">
-            {trimmed.replace("> ", "")}
-          </blockquote>
-        );
-      }
-
-      // Handle bullet points
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        const items = trimmed.split(/\n[-*]\s/).map(item => item.replace(/^[-*]\s/, ""));
-        return (
-          <ul key={index} className="list-disc pl-6 space-y-3 mb-8 text-neutral-700 font-normal">
-            {items.map((item, i) => (
-              <li key={i} className="text-base md:text-lg leading-relaxed">{item}</li>
-            ))}
-          </ul>
-        );
-      }
-
-      // Standard paragraph
-      return (
-        <p key={index} className="text-base md:text-lg leading-relaxed text-neutral-700 mb-8 font-normal">
-          {trimmed}
-        </p>
-      );
-    });
   };
 
   return (
@@ -120,74 +121,95 @@ export default async function ArticlePage({ params }: PageProps) {
       <Header />
 
       <main className="max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20">
-
-        {/* Editorial Subheader / Back button */}
+        
+        {/* Editorial Subheader */}
         <div className="flex justify-between items-end border-b border-neutral-200 pb-4 mb-12">
-          <Link
-            href="/"
-            className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors flex items-center gap-1.5"
+          <Link 
+            href="/" 
+            className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors"
           >
-            ← BACK TO ISSUES
+            ← ALL ISSUES
           </Link>
-          <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hidden sm:block">
-            SIGHTSYNCH JOURNAL — ARTICLE
+          <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
+            SIGHTSYNCH JOURNAL — CATEGORY
           </div>
         </div>
 
-        {/* Inverse L-Shape structure layout */}
-        {/* Top Center Layout: Metadata Header */}
-        <header className="max-w-4xl mx-auto text-center mb-16 md:mb-24">
-          {article.category && (
-            <span className="inline-block text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-3 py-1 mb-8">
-              {article.category}
-            </span>
-          )}
-
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.08] text-neutral-900 uppercase max-w-4xl mx-auto mb-8">
-            {article.title}
+        {/* Category Header */}
+        <header className="mb-16 border-b border-neutral-200 pb-8">
+          <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-400 block mb-3">
+            ARCHIVE BY TOPIC
+          </span>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none text-neutral-900 uppercase">
+            {categoryInfo.displayName} / {categoryInfo.db}
           </h1>
-
-          {article.summary && (
-            <p className="text-lg md:text-2xl font-normal leading-relaxed text-neutral-500 max-w-2xl mx-auto mb-8">
-              {article.summary}
-            </p>
-          )}
-
-          <div className="flex items-center justify-center gap-6 text-xs font-mono text-neutral-400 uppercase tracking-widest">
-            <span>{formattedDate}</span>
-            <span>•</span>
-            <span>GLOBAL ARCHIVE</span>
-          </div>
         </header>
 
-        {/* 기사 썸네일 이미지 출력 예시 */}
-        {article.image_url && (
-          <div className="w-full h-64 relative mb-6">
-            <img 
-              src={article.image_url} 
-              alt={article.title} 
-              className="object-cover w-full h-full rounded-lg"
-            />
+        {/* Article Grid */}
+        {articles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 border-b border-neutral-200 pb-16">
+            {articles.map((article) => (
+              <article key={article.id} className="flex flex-col justify-between group">
+                <div>
+                  {/* Image Container */}
+                  <div className="relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                    <Image
+                      src={article.image_url || "/hero_modern_art.jpg"}
+                      alt={article.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 30vw"
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                    />
+                  </div>
+
+                  {/* Category & Tags */}
+                  <div className="flex flex-wrap gap-3 items-center mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-950 border border-neutral-950 px-2 py-0.5">
+                      {article.category}
+                    </span>
+                    {renderTags(article.tags)}
+                  </div>
+
+                  {/* Title */}
+                  <h2 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
+                    {article.title}
+                  </h2>
+
+                  {/* Summary */}
+                  <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
+                    {article.summary}
+                  </p>
+                </div>
+
+                {/* Read More Link */}
+                <div>
+                  <Link 
+                    href={`/article/${article.id}`} 
+                    className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
+                  >
+                    READ ARTICLE
+                    <span className="text-[10px]">↗</span>
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="py-24 text-center border-b border-neutral-200 mb-16">
+            <p className="text-sm font-mono uppercase text-neutral-400 tracking-wider mb-4">
+              No articles found in this category
+            </p>
+            <Link 
+              href="/" 
+              className="inline-block text-xs font-bold tracking-widest uppercase border border-neutral-900 px-6 py-3 hover:bg-neutral-950 hover:text-white transition-colors"
+            >
+              Go Back Home
+            </Link>
           </div>
         )}
 
-        {/* Body Section Layout (Whitespace generous container) */}
-        <section className="max-w-3xl mx-auto pb-16 border-b border-neutral-200">
-          <div className="prose prose-neutral max-w-none">
-            {renderMarkdown(article.body_markdown)}
-          </div>
-        </section>
-
-        {/* Tags Section Layout */}
-        {article.tags && (
-          <section className="max-w-3xl mx-auto pt-8 flex flex-wrap gap-3 items-center">
-            <span className="text-xs font-mono uppercase tracking-widest text-neutral-400 mr-2">Tags:</span>
-            {renderTags(article.tags)}
-          </section>
-        )}
-
-        {/* Extra Footer block */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-20 mt-20 border-t border-neutral-200 text-neutral-500 font-mono text-xs">
+        {/* Swiss-inspired Grid blocks */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 text-neutral-500 font-mono text-xs">
           <div>
             <span className="block font-bold text-neutral-900 mb-2 uppercase">01 / BRAND EDITORIAL</span>
             Curated analysis covering the intersections of luxury fashion, modern architecture, sound design, and beauty.
@@ -207,7 +229,7 @@ export default async function ArticlePage({ params }: PageProps) {
       {/* Global Footer */}
       <footer className="bg-white border-t border-neutral-200 py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-6 md:px-12">
-
+          
           <div className="mb-12">
             <Link href="/" className="text-3xl font-black tracking-[0.15em] lowercase hover:opacity-80 transition-opacity">
               sightsynch

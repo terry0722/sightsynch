@@ -343,11 +343,11 @@ export default async function Home() {
                 카테고리
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><Link href="/#apparel" className="hover:text-black transition-colors">패션</Link></li>
-                <li><Link href="/#art" className="hover:text-black transition-colors">미술</Link></li>
-                <li><Link href="/#tech" className="hover:text-black transition-colors">테크</Link></li>
-                <li><Link href="/#beauty" className="hover:text-black transition-colors">뷰티</Link></li>
-                <li><Link href="/#lifestyle" className="hover:text-black transition-colors">라이프스타일</Link></li>
+                <li><Link href="/category/fashion" className="hover:text-black transition-colors">패션</Link></li>
+                <li><Link href="/category/art" className="hover:text-black transition-colors">미술</Link></li>
+                <li><Link href="/category/tech" className="hover:text-black transition-colors">테크</Link></li>
+                <li><Link href="/category/beauty" className="hover:text-black transition-colors">뷰티</Link></li>
+                <li><Link href="/category/lifestyle" className="hover:text-black transition-colors">라이프스타일</Link></li>
               </ul>
             </div>
 
