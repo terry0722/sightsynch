@@ -105,12 +105,12 @@ export default function Header() {
       {/* 2. Main GNB Bar */}
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex h-20 items-center justify-between bg-white">
         {/* Logo */}
-        <a 
-          href="#" 
+        <Link 
+          href="/" 
           className="text-2xl font-black tracking-[0.2em] hover:opacity-80 transition-opacity lowercase"
         >
           sightsynch
-        </a>
+        </Link>
 
         {/* Navigation Menu */}
         <nav className="hidden md:flex items-center space-x-10">
