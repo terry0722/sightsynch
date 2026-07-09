@@ -121,8 +121,10 @@ export default async function ArticlePage({ params }: PageProps) {
 
         {/* Body Section Layout (Whitespace generous container) */}
         <section className="max-w-3xl mx-auto pb-16 border-b border-neutral-200">
-          <div className="prose prose-neutral max-w-none">
-            <ReactMarkdown>{article.body_markdown}</ReactMarkdown>
+          <div className="prose max-w-none prose-neutral prose-img:rounded-md leading-relaxed text-gray-800">
+            <ReactMarkdown>
+              {article.body_markdown}
+            </ReactMarkdown>
           </div>
         </section>
 
