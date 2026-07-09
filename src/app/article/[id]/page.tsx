@@ -226,7 +226,7 @@ export default async function ArticlePage({ params }: PageProps) {
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
                 <li><Link href="/#apparel" className="hover:text-black transition-colors">패션</Link></li>
                 <li><Link href="/#art" className="hover:text-black transition-colors">미술</Link></li>
-                <li><Link href="/#audio" className="hover:text-black transition-colors">음향기기</Link></li>
+                <li><Link href="/#tech" className="hover:text-black transition-colors">테크</Link></li>
                 <li><Link href="/#beauty" className="hover:text-black transition-colors">뷰티</Link></li>
                 <li><Link href="/#lifestyle" className="hover:text-black transition-colors">라이프스타일</Link></li>
               </ul>

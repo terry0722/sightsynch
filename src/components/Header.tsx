@@ -152,10 +152,10 @@ export default function Header() {
             미술
           </a>
           <a 
-            href="#audio" 
+            href="#tech" 
             className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
           >
-            음향기기
+            테크
           </a>
           <a 
             href="#beauty" 
@@ -222,7 +222,7 @@ export default function Header() {
               </div>
             </div>
             <a href="#art" className="hover:text-neutral-500 py-1 border-b border-neutral-100">미술</a>
-            <a href="#audio" className="hover:text-neutral-500 py-1 border-b border-neutral-100">음향기기</a>
+            <a href="#tech" className="hover:text-neutral-500 py-1 border-b border-neutral-100">테크</a>
             <a href="#beauty" className="hover:text-neutral-500 py-1 border-b border-neutral-100">뷰티</a>
             <a href="#lifestyle" className="hover:text-neutral-500 py-1">라이프스타일</a>
           </div>
