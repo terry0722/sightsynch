@@ -135,7 +135,7 @@ export default async function Home() {
             <article className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex flex-col justify-between group">
               <div>
                 {/* Image Container */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200">
+                <Link href={`/article/${heroArticle.id}`} className="block relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200">
                   <Image
                     src={heroArticle.image_url || "/hero_loreal_gucci.jpg"}
                     alt={heroArticle.title}
@@ -144,7 +144,7 @@ export default async function Home() {
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                     priority
                   />
-                </div>
+                </Link>
 
                 {/* Category & Tags */}
                 <div className="flex flex-wrap gap-3 items-center mb-4">
@@ -157,25 +157,16 @@ export default async function Home() {
                 </div>
 
                 {/* Title */}
-                <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
-                  {heroArticle.title}
-                </h1>
+                <Link href={`/article/${heroArticle.id}`} className="block">
+                  <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
+                    {heroArticle.title}
+                  </h1>
+                </Link>
 
                 {/* Summary */}
                 <p className="text-base md:text-lg leading-relaxed text-neutral-600 font-normal max-w-2xl mb-8">
                   {heroArticle.summary}
                 </p>
-              </div>
-
-              {/* Read More Link */}
-              <div>
-                <Link 
-                  href={`/article/${heroArticle.id}`} 
-                  className="inline-flex items-center gap-2 text-sm font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
-                >
-                  READ ARTICLE
-                  <span className="text-xs">↗</span>
-                </Link>
               </div>
             </article>
           ) : (
@@ -196,7 +187,7 @@ export default async function Home() {
                 >
                   <div>
                     {/* Image Container */}
-                    <div className="relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                    <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                       <Image
                         src={article.image_url || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
                         alt={article.title}
@@ -204,7 +195,7 @@ export default async function Home() {
                         sizes="(max-width: 1024px) 100vw, 40vw"
                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                       />
-                    </div>
+                    </Link>
 
                     {/* Category & Tags */}
                     <div className="flex flex-wrap gap-3 items-center mb-3">
@@ -217,25 +208,16 @@ export default async function Home() {
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                      {article.title}
-                    </h2>
+                    <Link href={`/article/${article.id}`} className="block">
+                      <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
+                        {article.title}
+                      </h2>
+                    </Link>
 
                     {/* Summary */}
                     <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
                       {article.summary}
                     </p>
-                  </div>
-
-                  {/* Read More Link */}
-                  <div>
-                    <Link 
-                      href={`/article/${article.id}`} 
-                      className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
-                    >
-                      READ ARTICLE
-                      <span className="text-[10px]">↗</span>
-                    </Link>
                   </div>
                 </article>
               ))
@@ -258,7 +240,7 @@ export default async function Home() {
                 <article key={article.id} className="flex flex-col justify-between group">
                   <div>
                     {/* Image Container */}
-                    <div className="relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                    <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                       <Image
                         src={article.image_url || "/hero_modern_art.jpg"}
                         alt={article.title}
@@ -266,7 +248,7 @@ export default async function Home() {
                         sizes="(max-width: 768px) 100vw, 30vw"
                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                       />
-                    </div>
+                    </Link>
 
                     {/* Category & Tags */}
                     <div className="flex flex-wrap gap-3 items-center mb-3">
@@ -279,25 +261,16 @@ export default async function Home() {
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                      {article.title}
-                    </h3>
+                    <Link href={`/article/${article.id}`} className="block">
+                      <h3 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
+                        {article.title}
+                      </h3>
+                    </Link>
 
                     {/* Summary */}
                     <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
                       {article.summary}
                     </p>
-                  </div>
-
-                  {/* Read More Link */}
-                  <div>
-                    <Link 
-                      href={`/article/${article.id}`} 
-                      className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
-                    >
-                      READ ARTICLE
-                      <span className="text-[10px]">↗</span>
-                    </Link>
                   </div>
                 </article>
               ))}

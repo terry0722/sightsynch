@@ -152,7 +152,7 @@ export default async function CategoryPage({ params }: PageProps) {
               <article key={article.id} className="flex flex-col justify-between group">
                 <div>
                   {/* Image Container */}
-                  <div className="relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                  <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                     <Image
                       src={article.image_url || "/hero_modern_art.jpg"}
                       alt={article.title}
@@ -160,7 +160,7 @@ export default async function CategoryPage({ params }: PageProps) {
                       sizes="(max-width: 768px) 100vw, 30vw"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                     />
-                  </div>
+                  </Link>
 
                   {/* Category & Tags */}
                   <div className="flex flex-wrap gap-3 items-center mb-3">
@@ -171,9 +171,11 @@ export default async function CategoryPage({ params }: PageProps) {
                   </div>
 
                   {/* Title */}
-                  <h2 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                    {article.title}
-                  </h2>
+                  <Link href={`/article/${article.id}`} className="block">
+                    <h2 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
+                      {article.title}
+                    </h2>
+                  </Link>
 
                   {/* Summary */}
                   <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
@@ -181,16 +183,7 @@ export default async function CategoryPage({ params }: PageProps) {
                   </p>
                 </div>
 
-                {/* Read More Link */}
-                <div>
-                  <Link 
-                    href={`/article/${article.id}`} 
-                    className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase border-b border-[#111111] pb-1 hover:text-neutral-500 hover:border-neutral-500 transition-all"
-                  >
-                    READ ARTICLE
-                    <span className="text-[10px]">↗</span>
-                  </Link>
-                </div>
+
               </article>
             ))}
           </div>
