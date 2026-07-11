@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Header from "../../../components/Header";
 import { supabase } from "../../../utils/supabase/client";
 
@@ -56,65 +58,6 @@ export default async function ArticlePage({ params }: PageProps) {
     ));
   };
 
-  const renderMarkdown = (text: string) => {
-    if (!text) return null;
-    return text.split("\n\n").map((paragraph, index) => {
-      const trimmed = paragraph.trim();
-      if (!trimmed) return null;
-
-      // Handle headers
-      if (trimmed.startsWith("### ")) {
-        return (
-          <h4 key={index} className="text-lg font-black mt-8 mb-4 uppercase tracking-wide text-neutral-900 border-l-2 border-neutral-950 pl-3">
-            {trimmed.replace("### ", "")}
-          </h4>
-        );
-      }
-      if (trimmed.startsWith("## ")) {
-        return (
-          <h3 key={index} className="text-xl md:text-2xl font-black mt-12 mb-6 uppercase tracking-tight text-neutral-900">
-            {trimmed.replace("## ", "")}
-          </h3>
-        );
-      }
-      if (trimmed.startsWith("# ")) {
-        return (
-          <h2 key={index} className="text-2xl md:text-3xl font-black mt-16 mb-8 uppercase tracking-tight text-neutral-900">
-            {trimmed.replace("# ", "")}
-          </h2>
-        );
-      }
-
-      // Handle blockquotes
-      if (trimmed.startsWith("> ")) {
-        return (
-          <blockquote key={index} className="border-l-4 border-neutral-300 pl-6 my-8 italic text-neutral-600 text-lg leading-relaxed max-w-2xl mx-auto">
-            {trimmed.replace("> ", "")}
-          </blockquote>
-        );
-      }
-
-      // Handle bullet points
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        const items = trimmed.split(/\n[-*]\s/).map(item => item.replace(/^[-*]\s/, ""));
-        return (
-          <ul key={index} className="list-disc pl-6 space-y-3 mb-8 text-neutral-700 font-normal">
-            {items.map((item, i) => (
-              <li key={i} className="text-base md:text-lg leading-relaxed">{item}</li>
-            ))}
-          </ul>
-        );
-      }
-
-      // Standard paragraph
-      return (
-        <p key={index} className="text-base md:text-lg leading-relaxed text-neutral-700 mb-8 font-normal">
-          {trimmed}
-        </p>
-      );
-    });
-  };
-
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
       <Header />
@@ -162,10 +105,11 @@ export default async function ArticlePage({ params }: PageProps) {
 
         {/* 기사 썸네일 이미지 출력 예시 */}
         {article.image_url && (
-          <div className="w-full h-64 relative mb-6">
-            <img 
-              src={article.image_url} 
-              alt={article.title} 
+          <div className="w-full h-64 md:h-[28rem] relative mb-6 max-w-5xl mx-auto">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={article.image_url}
+              alt={article.title}
               className="object-cover w-full h-full rounded-lg"
             />
           </div>
@@ -174,7 +118,68 @@ export default async function ArticlePage({ params }: PageProps) {
         {/* Body Section Layout (Whitespace generous container) */}
         <section className="max-w-3xl mx-auto pb-16 border-b border-neutral-200">
           <div className="prose prose-neutral max-w-none">
-            {renderMarkdown(article.body_markdown)}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h2 className="text-2xl md:text-3xl font-black mt-16 mb-8 uppercase tracking-tight text-neutral-900">
+                    {children}
+                  </h2>
+                ),
+                h2: ({ children }) => (
+                  <h3 className="text-xl md:text-2xl font-black mt-12 mb-6 uppercase tracking-tight text-neutral-900">
+                    {children}
+                  </h3>
+                ),
+                h3: ({ children }) => (
+                  <h4 className="text-lg font-black mt-8 mb-4 uppercase tracking-wide text-neutral-900 border-l-2 border-neutral-950 pl-3">
+                    {children}
+                  </h4>
+                ),
+                p: ({ children }) => (
+                  <p className="text-base md:text-lg leading-relaxed text-neutral-700 mb-8 font-normal">
+                    {children}
+                  </p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-bold text-neutral-900">{children}</strong>
+                ),
+                em: ({ children }) => (
+                  <em className="italic text-neutral-800">{children}</em>
+                ),
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-neutral-900 underline underline-offset-4 decoration-neutral-300 hover:decoration-neutral-900 transition-colors"
+                  >
+                    {children}
+                  </a>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-neutral-300 pl-6 my-8 italic text-neutral-600 text-lg leading-relaxed">
+                    {children}
+                  </blockquote>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-6 space-y-3 mb-8 text-neutral-700 font-normal">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-6 space-y-3 mb-8 text-neutral-700 font-normal">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-base md:text-lg leading-relaxed">{children}</li>
+                ),
+                hr: () => <hr className="my-12 border-neutral-200" />,
+              }}
+            >
+              {article.body_markdown}
+            </ReactMarkdown>
           </div>
         </section>
 
@@ -183,6 +188,20 @@ export default async function ArticlePage({ params }: PageProps) {
           <section className="max-w-3xl mx-auto pt-8 flex flex-wrap gap-3 items-center">
             <span className="text-xs font-mono uppercase tracking-widest text-neutral-400 mr-2">Tags:</span>
             {renderTags(article.tags)}
+          </section>
+        )}
+
+        {/* Source link (원문 이동) */}
+        {article.source_url && (
+          <section className="max-w-3xl mx-auto pt-6">
+            <a
+              href={article.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors"
+            >
+              원문 보기 (SOURCE) →
+            </a>
           </section>
         )}
 
