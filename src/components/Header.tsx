@@ -1,14 +1,66 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import AccountPopover from "./AccountPopover";
+import { createClient } from "../utils/supabase/client";
+
+import { type User } from "@supabase/supabase-js";
+
+interface Profile {
+  display_name?: string;
+  avatar_url?: string;
+  created_at?: string;
+}
 
 export default function Header() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState("한국어");
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    
+    // Fetch initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        // Fetch user profile
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        setProfile(profileData);
+      }
+    };
+    
+    getInitialSession();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        setProfile(profileData);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200">
@@ -28,7 +80,7 @@ export default function Header() {
           <input
             type="text"
             placeholder="Sightsynch 전체 검색"
-            className="w-full bg-transparent text-xs text-neutral-905 placeholder-neutral-400 outline-none border-b border-transparent focus:border-neutral-400 py-1 transition-colors font-medium"
+            className="w-full bg-transparent text-xs text-neutral-900 placeholder-neutral-400 outline-none border-b border-transparent focus:border-neutral-400 py-1 transition-colors font-medium"
           />
         </div>
 
@@ -50,9 +102,17 @@ export default function Header() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <span>계정</span>
+              <span>
+                {user ? (profile?.display_name || user.email?.split("@")[0]) : "계정"}
+              </span>
             </div>
-            <AccountPopover isOpen={isAccountOpen} />
+            
+            <AccountPopover 
+              isOpen={isAccountOpen} 
+              onClose={() => setIsAccountOpen(false)}
+              user={user}
+              profile={profile}
+            />
           </div>
 
           {/* Language trigger */}
@@ -217,14 +277,14 @@ export default function Header() {
             <div className="space-y-2">
               <span className="block text-neutral-400 text-xs tracking-widest font-black">패션</span>
               <div className="pl-4 flex flex-col space-y-2 text-xs text-neutral-600 font-semibold">
-                <Link href="/category/fashion" className="hover:text-black">의류</Link>
-                <Link href="/category/fashion" className="hover:text-black">신발</Link>
+                <Link href="/category/fashion" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-black">의류</Link>
+                <Link href="/category/fashion" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-black">신발</Link>
               </div>
             </div>
-            <Link href="/category/art" className="hover:text-neutral-500 py-1 border-b border-neutral-100">미술</Link>
-            <Link href="/category/tech" className="hover:text-neutral-500 py-1 border-b border-neutral-100">테크</Link>
-            <Link href="/category/beauty" className="hover:text-neutral-500 py-1 border-b border-neutral-100">뷰티</Link>
-            <Link href="/category/lifestyle" className="hover:text-neutral-500 py-1">라이프스타일</Link>
+            <Link href="/category/art" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">미술</Link>
+            <Link href="/category/tech" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">테크</Link>
+            <Link href="/category/beauty" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">뷰티</Link>
+            <Link href="/category/lifestyle" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1">라이프스타일</Link>
           </div>
 
           <hr className="border-neutral-200" />
@@ -233,24 +293,56 @@ export default function Header() {
           <div className="space-y-4">
             <span className="block text-neutral-400 text-xs tracking-widest font-black uppercase">계정</span>
             <div className="bg-neutral-50 p-5 border border-neutral-200 space-y-3">
-              <p className="text-[11px] text-neutral-500 leading-normal font-medium">
-                Sightsynch 계정에 가입하고 다양한 기능과 혜택을 이용해보세요.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  href="/register"
-                  style={{ backgroundColor: "#F37021" }}
-                  className="text-white text-[10px] font-bold py-3 px-3 text-center uppercase tracking-wider rounded-none block"
-                >
-                  회원가입
-                </Link>
-                <button
-                  onClick={() => alert("로그인")}
-                  className="bg-white text-neutral-900 border border-neutral-300 text-[10px] font-bold py-3 px-3 text-center uppercase tracking-wider rounded-none"
-                >
-                  로그인
-                </button>
-              </div>
+              {user ? (
+                <div>
+                  <p className="text-xs font-bold text-neutral-800 break-all mb-3">
+                    {profile?.display_name || user.email}님 환영합니다.
+                  </p>
+                  <div className="flex flex-col space-y-2.5">
+                    <Link
+                      href="/my"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-xs font-bold text-neutral-600 hover:text-black uppercase tracking-wider"
+                    >
+                      내 북마크 (My Archives)
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        const supabase = createClient();
+                        await supabase.auth.signOut();
+                        setIsMobileMenuOpen(false);
+                        window.location.reload();
+                      }}
+                      className="text-left text-xs font-bold text-neutral-600 hover:text-black uppercase tracking-wider cursor-pointer font-bold"
+                    >
+                      로그아웃 (Sign Out)
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[11px] text-neutral-500 leading-normal font-medium mb-3">
+                    Sightsynch 계정에 가입하고 다양한 기능과 혜택을 이용해보세요.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link
+                      href="/signup"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      style={{ backgroundColor: "#F37021" }}
+                      className="text-white text-[10px] font-bold py-3 px-3 text-center uppercase tracking-wider rounded-none block"
+                    >
+                      회원가입
+                    </Link>
+                    <Link
+                      href="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="bg-white text-neutral-900 border border-neutral-300 hover:border-black text-[10px] font-bold py-3 px-3 text-center uppercase tracking-wider rounded-none block"
+                    >
+                      로그인
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

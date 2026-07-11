@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "../../../components/Header";
-import { supabase } from "../../../utils/supabase/client";
+import NewsletterForm from "../../../components/NewsletterForm";
+import { createClient } from "../../../utils/supabase/server";
 
 export const revalidate = 0;
 
@@ -65,6 +66,7 @@ export default async function CategoryPage({ params }: PageProps) {
   }
 
   let articles: Article[] = [];
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase
@@ -278,20 +280,8 @@ export default async function CategoryPage({ params }: PageProps) {
                 <p className="text-xs text-neutral-500 mb-4 leading-relaxed font-medium">
                   Sightsynch의 최신 소식을 이메일로 받아보세요.
                 </p>
-                <form className="flex w-full max-w-md border border-neutral-300 focus-within:border-black transition-colors">
-                  <input
-                    type="email"
-                    placeholder="이메일 주소를 입력하세요"
-                    className="w-full px-4 py-3 text-xs bg-white text-black outline-none font-medium placeholder-neutral-400"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="bg-[#0066cc] text-white hover:bg-[#0052a3] px-6 py-3 text-xs font-bold tracking-wider uppercase transition-colors shrink-0"
-                  >
-                    구독하기
-                  </button>
-                </form>
+                {/* Dynamic Newsletter Form component */}
+                <NewsletterForm />
               </div>
             </div>
           </div>

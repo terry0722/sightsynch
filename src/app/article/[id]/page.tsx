@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Header from "../../../components/Header";
-import { supabase } from "../../../utils/supabase/client";
+import ArticleActions from "../../../components/ArticleActions";
+import NewsletterForm from "../../../components/NewsletterForm";
+import { createClient } from "../../../utils/supabase/server";
 
 export const revalidate = 0;
 
@@ -13,6 +15,7 @@ interface PageProps {
 
 export default async function ArticlePage({ params }: PageProps) {
   const { id } = await params;
+  const supabase = await createClient();
 
   // Fetch the specific article
   const { data: article, error } = await supabase
@@ -25,6 +28,44 @@ export default async function ArticlePage({ params }: PageProps) {
   if (error || !article) {
     notFound();
   }
+
+  // Asynchronously increment view count on entry
+  await supabase
+    .from("articles")
+    .update({ view_count: (article.view_count || 0) + 1 })
+    .eq("id", id);
+
+  // Fetch user authentications
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let isBookmarked = false;
+  let isLiked = false;
+
+  if (user) {
+    // Check bookmark state
+    const { data: bookmarkData } = await supabase
+      .from("bookmarks")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("article_id", id)
+      .maybeSingle();
+    isBookmarked = !!bookmarkData;
+
+    // Check like state
+    const { data: likeData } = await supabase
+      .from("article_likes")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("article_id", id)
+      .maybeSingle();
+    isLiked = !!likeData;
+  }
+
+  // Count total likes
+  const { count: likesCount } = await supabase
+    .from("article_likes")
+    .select("*", { count: "exact", head: true })
+    .eq("article_id", id);
 
   // Format date elegantly
   const formattedDate = article.created_at
@@ -100,6 +141,16 @@ export default async function ArticlePage({ params }: PageProps) {
             <span>{formattedDate}</span>
             <span>•</span>
             <span>GLOBAL ARCHIVE</span>
+          </div>
+
+          {/* Centered Actions Bar */}
+          <div className="flex justify-center mt-8">
+            <ArticleActions
+              articleId={id}
+              initialLikesCount={likesCount || 0}
+              initialIsLiked={isLiked}
+              initialIsBookmarked={isBookmarked}
+            />
           </div>
         </header>
 
@@ -185,9 +236,13 @@ export default async function ArticlePage({ params }: PageProps) {
 
         {/* Tags Section Layout */}
         {article.tags && (
-          <section className="max-w-3xl mx-auto pt-8 flex flex-wrap gap-3 items-center">
-            <span className="text-xs font-mono uppercase tracking-widest text-neutral-400 mr-2">Tags:</span>
-            {renderTags(article.tags)}
+          <section className="max-w-3xl mx-auto py-12 border-b border-neutral-200">
+            <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-400 mb-6">
+              ARTICLE TAGS
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {renderTags(article.tags)}
+            </div>
           </section>
         )}
 
@@ -282,20 +337,9 @@ export default async function ArticlePage({ params }: PageProps) {
                 <p className="text-xs text-neutral-500 mb-4 leading-relaxed font-medium">
                   Sightsynch의 최신 소식을 이메일로 받아보세요.
                 </p>
-                <form className="flex w-full max-w-md border border-neutral-300 focus-within:border-black transition-colors">
-                  <input
-                    type="email"
-                    placeholder="이메일 주소를 입력하세요"
-                    className="w-full px-4 py-3 text-xs bg-white text-black outline-none font-medium placeholder-neutral-400"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="bg-[#0066cc] text-white hover:bg-[#0052a3] px-6 py-3 text-xs font-bold tracking-wider uppercase transition-colors shrink-0"
-                  >
-                    구독하기
-                  </button>
-                </form>
+                
+                {/* Dynamic Newsletter Form component */}
+                <NewsletterForm />
               </div>
             </div>
           </div>
