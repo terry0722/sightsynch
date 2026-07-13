@@ -2,10 +2,16 @@
 
 import React, { useState } from "react";
 import { createClient } from "../utils/supabase/client";
+import { getTranslation } from "../utils/i18n";
 
-export default function NewsletterForm() {
+interface NewsletterFormProps {
+  locale?: string;
+}
+
+export default function NewsletterForm({ locale = "ko" }: NewsletterFormProps) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
+  const t = getTranslation(locale);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +50,7 @@ export default function NewsletterForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="이메일 주소를 입력하세요"
+          placeholder={t("newsletterPlaceholder")}
           className="w-full px-4 py-3 text-xs bg-white text-black outline-none font-medium placeholder-neutral-400"
           required
           disabled={status === "loading"}
@@ -54,7 +60,7 @@ export default function NewsletterForm() {
           className="bg-[#0066cc] text-white hover:bg-[#0052a3] px-6 py-3 text-xs font-bold tracking-wider uppercase transition-colors shrink-0 disabled:bg-neutral-300 disabled:cursor-not-allowed"
           disabled={status === "loading"}
         >
-          {status === "loading" ? "신청 중..." : "구독하기"}
+          {status === "loading" ? t("subscribing") : t("newsletterButton")}
         </button>
       </form>
 
@@ -62,17 +68,17 @@ export default function NewsletterForm() {
       <div className="mt-3 min-h-[1.5rem]">
         {status === "success" && (
           <p className="text-xs font-bold text-emerald-600">
-            ✓ 구독 신청이 완료되었습니다.
+            {t("newsletterSuccess")}
           </p>
         )}
         {status === "duplicate" && (
           <p className="text-xs font-bold text-amber-600">
-            ℹ 이미 구독 중인 이메일입니다.
+            {t("newsletterDuplicate")}
           </p>
         )}
         {status === "error" && (
           <p className="text-xs font-bold text-red-500">
-            ✗ 구독 신청 중 오류가 발생했습니다. 다시 시도해 주세요.
+            {t("newsletterError")}
           </p>
         )}
       </div>

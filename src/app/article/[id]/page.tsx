@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Header from "../../../components/Header";
 import ArticleActions from "../../../components/ArticleActions";
 import NewsletterForm from "../../../components/NewsletterForm";
 import { createClient } from "../../../utils/supabase/server";
+import { pickArticle, getTranslation, type TranslationKey } from "../../../utils/i18n";
 
 export const revalidate = 0;
 
@@ -15,24 +17,33 @@ interface PageProps {
 
 export default async function ArticlePage({ params }: PageProps) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value || "ko";
+  const t = getTranslation(locale);
   const supabase = await createClient();
 
   // Fetch the specific article
-  const { data: article, error } = await supabase
+  const { data: articleData, error } = await supabase
     .from("articles")
     .select("*")
     .eq("id", id)
     .single();
 
   // If error or no article is found, trigger notFound
-  if (error || !article) {
+  if (error || !articleData) {
+    notFound();
+  }
+
+  // Pick translation fields
+  const article = pickArticle(articleData, locale);
+  if (!article) {
     notFound();
   }
 
   // Asynchronously increment view count on entry
   await supabase
     .from("articles")
-    .update({ view_count: (article.view_count || 0) + 1 })
+    .update({ view_count: (articleData.view_count || 0) + 1 })
     .eq("id", id);
 
   // Fetch user authentications
@@ -68,8 +79,8 @@ export default async function ArticlePage({ params }: PageProps) {
     .eq("article_id", id);
 
   // Format date elegantly
-  const formattedDate = article.created_at
-    ? new Date(article.created_at).toLocaleDateString("ko-KR", {
+  const formattedDate = articleData.created_at
+    ? new Date(articleData.created_at).toLocaleDateString(locale === "en" ? "en-US" : "ko-KR", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -99,6 +110,12 @@ export default async function ArticlePage({ params }: PageProps) {
     ));
   };
 
+  // Translate category codes dynamically
+  const getTranslatedCategory = (cat: string) => {
+    const key = cat.toLowerCase() as TranslationKey;
+    return t(key) || cat;
+  };
+
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
       <Header />
@@ -111,10 +128,10 @@ export default async function ArticlePage({ params }: PageProps) {
             href="/"
             className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors flex items-center gap-1.5"
           >
-            ← BACK TO ISSUES
+            {t("backToIssues")}
           </Link>
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hidden sm:block">
-            SIGHTSYNCH JOURNAL — ARTICLE
+            SIGHTSYNCH JOURNAL — {t("globalArchive")}
           </div>
         </div>
 
@@ -123,7 +140,7 @@ export default async function ArticlePage({ params }: PageProps) {
         <header className="max-w-4xl mx-auto text-center mb-16 md:mb-24">
           {article.category && (
             <span className="inline-block text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-3 py-1 mb-8">
-              {article.category}
+              {getTranslatedCategory(article.category)}
             </span>
           )}
 
@@ -140,7 +157,7 @@ export default async function ArticlePage({ params }: PageProps) {
           <div className="flex items-center justify-center gap-6 text-xs font-mono text-neutral-400 uppercase tracking-widest">
             <span>{formattedDate}</span>
             <span>•</span>
-            <span>GLOBAL ARCHIVE</span>
+            <span>{t("globalArchive")}</span>
           </div>
 
           {/* Centered Actions Bar */}
@@ -255,7 +272,7 @@ export default async function ArticlePage({ params }: PageProps) {
               rel="noopener noreferrer"
               className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors"
             >
-              원문 보기 (SOURCE) →
+              {t("originalSource")}
             </a>
           </section>
         )}
@@ -263,16 +280,16 @@ export default async function ArticlePage({ params }: PageProps) {
         {/* Extra Footer block */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-20 mt-20 border-t border-neutral-200 text-neutral-500 font-mono text-xs">
           <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">01 / BRAND EDITORIAL</span>
-            Curated analysis covering the intersections of luxury fashion, modern architecture, sound design, and beauty.
+            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot1Title")}</span>
+            {t("foot1Desc")}
           </div>
           <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">02 / ARCHIVE PRINT</span>
-            Available quarterly in selected global bookstores and high-end boutiques across Seoul, Tokyo, and Paris.
+            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot2Title")}</span>
+            {t("foot2Desc")}
           </div>
           <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">03 / DIGITAL SYNC</span>
-            Receive real-time synchronizations of high-fidelity visual culture directly via our dedicated newsletter.
+            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot3Title")}</span>
+            {t("foot3Desc")}
           </div>
         </div>
 
@@ -291,20 +308,20 @@ export default async function ArticlePage({ params }: PageProps) {
           <div className="grid grid-cols-1 md:grid-cols-6 gap-12 md:gap-8 mb-16">
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
-                카테고리
+                {t("byCategory")}
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><Link href="/category/fashion" className="hover:text-black transition-colors">패션</Link></li>
-                <li><Link href="/category/art" className="hover:text-black transition-colors">미술</Link></li>
-                <li><Link href="/category/tech" className="hover:text-black transition-colors">테크</Link></li>
-                <li><Link href="/category/beauty" className="hover:text-black transition-colors">뷰티</Link></li>
-                <li><Link href="/category/lifestyle" className="hover:text-black transition-colors">라이프스타일</Link></li>
+                <li><Link href="/category/fashion" className="hover:text-black transition-colors">{t("fashion")}</Link></li>
+                <li><Link href="/category/art" className="hover:text-black transition-colors">{t("art")}</Link></li>
+                <li><Link href="/category/tech" className="hover:text-black transition-colors">{t("tech")}</Link></li>
+                <li><Link href="/category/beauty" className="hover:text-black transition-colors">{t("beauty")}</Link></li>
+                <li><Link href="/category/lifestyle" className="hover:text-black transition-colors">{t("lifestyle")}</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
-                팔로우
+                {t("follow")}
               </h3>
               <div className="flex gap-4 items-center text-neutral-600">
                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-black transition-colors" aria-label="Instagram">
@@ -319,27 +336,27 @@ export default async function ArticlePage({ params }: PageProps) {
 
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
-                회사소개
+                {t("company")}
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><Link href="/#newsroom" className="hover:text-black transition-colors">뉴스룸</Link></li>
-                <li><Link href="/#careers" className="hover:text-black transition-colors">채용</Link></li>
-                <li><Link href="/#partnership" className="hover:text-black transition-colors">광고 및 제휴</Link></li>
-                <li><Link href="/#contact" className="hover:text-black transition-colors">연락처</Link></li>
+                <li><Link href="/#newsroom" className="hover:text-black transition-colors">{t("newsroom")}</Link></li>
+                <li><Link href="/#careers" className="hover:text-black transition-colors">{t("careers")}</Link></li>
+                <li><Link href="/#partnership" className="hover:text-black transition-colors">{t("partnership")}</Link></li>
+                <li><Link href="/#contact" className="hover:text-black transition-colors">{t("contact")}</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-3 md:pl-12 flex flex-col justify-between">
               <div className="mb-8">
                 <h3 className="text-xs font-bold tracking-widest mb-4 text-neutral-900 uppercase">
-                  NEWSLETTER
+                  {t("newsletterTitle")}
                 </h3>
                 <p className="text-xs text-neutral-500 mb-4 leading-relaxed font-medium">
-                  Sightsynch의 최신 소식을 이메일로 받아보세요.
+                  {t("newsletterDesc")}
                 </p>
                 
                 {/* Dynamic Newsletter Form component */}
-                <NewsletterForm />
+                <NewsletterForm locale={locale} />
               </div>
             </div>
           </div>
@@ -349,9 +366,9 @@ export default async function ArticlePage({ params }: PageProps) {
               © 2026 Sightsynch Limited. All Rights Reserved.
             </p>
             <div className="flex gap-4 text-[10px] font-medium text-neutral-500 tracking-wider">
-              <Link href="/#terms" className="hover:text-black transition-colors">이용약관</Link>
+              <Link href="/#terms" className="hover:text-black transition-colors">{t("terms")}</Link>
               <span>|</span>
-              <Link href="/#privacy" className="hover:text-black transition-colors">개인정보처리방침</Link>
+              <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
 

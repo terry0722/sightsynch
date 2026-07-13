@@ -2,18 +2,25 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Header from "../../components/Header";
 import { createClient } from "../../utils/supabase/server";
+import { pickArticle, getTranslation, type TranslationKey } from "../../utils/i18n";
 
 export const revalidate = 0;
 
 interface Article {
   id: string;
   title: string;
+  title_en?: string;
   summary: string;
+  summary_en?: string;
   category: string;
   tags: string | string[];
+  tags_en?: string | string[];
   image_url: string;
+  body_markdown?: string;
+  body_markdown_en?: string;
   created_at?: string;
 }
 
@@ -26,7 +33,11 @@ export default async function MyPage() {
     redirect("/login?next=/my");
   }
 
-  // Fetch user's bookmarked articles
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value || "ko";
+  const t = getTranslation(locale);
+
+  // Fetch user's bookmarked articles with both English & Korean columns
   const { data: bookmarksData, error } = await supabase
     .from("bookmarks")
     .select(`
@@ -34,9 +45,12 @@ export default async function MyPage() {
       articles:article_id (
         id,
         title,
+        title_en,
         summary,
+        summary_en,
         category,
         tags,
+        tags_en,
         image_url,
         created_at
       )
@@ -49,9 +63,14 @@ export default async function MyPage() {
   }
 
   // Extract nested articles safely
-  const bookmarkedArticles: Article[] = (bookmarksData as unknown as Array<{ articles: Article }> || [])
+  const rawArticles = (bookmarksData as unknown as Array<{ articles: Article }> || [])
     .map((item) => item.articles)
     .filter(Boolean);
+
+  // Translate articles based on locale
+  const bookmarkedArticles = rawArticles
+    .map((art) => pickArticle(art, locale))
+    .filter(Boolean) as Article[];
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -76,6 +95,11 @@ export default async function MyPage() {
     ));
   };
 
+  const getTranslatedCategory = (cat: string) => {
+    const key = cat.toLowerCase() as TranslationKey;
+    return t(key) || cat;
+  };
+
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
       <Header />
@@ -88,7 +112,7 @@ export default async function MyPage() {
             href="/" 
             className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors"
           >
-            ← BACK TO HOME
+            {t("backToHome")}
           </Link>
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
             SIGHTSYNCH JOURNAL — MEMBER ARCHIVE
@@ -98,10 +122,10 @@ export default async function MyPage() {
         {/* Dashboard Header */}
         <header className="mb-16 border-b border-neutral-200 pb-8">
           <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-400 block mb-3">
-            YOUR COLLECTED ISSUES ({bookmarkedArticles.length})
+            {t("savedIssuesCount")} ({bookmarkedArticles.length})
           </span>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none text-neutral-900 uppercase">
-            내 북마크 목록
+            {t("myArchiveHeader")}
           </h1>
           <p className="text-xs text-neutral-500 font-mono mt-2">
             MEMBER: {user.email}
@@ -128,7 +152,7 @@ export default async function MyPage() {
                   {/* Category & Tags */}
                   <div className="flex flex-wrap gap-3 items-center mb-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-950 border border-neutral-950 px-2 py-0.5">
-                      {article.category}
+                      {getTranslatedCategory(article.category)}
                     </span>
                     {renderTags(article.tags)}
                   </div>
@@ -151,13 +175,13 @@ export default async function MyPage() {
         ) : (
           <div className="py-24 text-center border-b border-neutral-200 mb-16">
             <p className="text-sm font-mono uppercase text-neutral-400 tracking-wider mb-4">
-              저장된 북마크가 없습니다.
+              {t("noBookmarks")}
             </p>
             <Link 
               href="/" 
               className="inline-block text-xs font-bold tracking-widest uppercase border border-neutral-900 px-6 py-3 hover:bg-neutral-950 hover:text-white transition-colors"
             >
-              기사 둘러보기
+              {t("exploreArticles")}
             </Link>
           </div>
         )}
@@ -179,9 +203,9 @@ export default async function MyPage() {
               © 2026 Sightsynch Limited. All Rights Reserved.
             </p>
             <div className="flex gap-4 text-[10px] font-medium text-neutral-500 tracking-wider">
-              <Link href="/#terms" className="hover:text-black transition-colors">이용약관</Link>
+              <Link href="/#terms" className="hover:text-black transition-colors">{t("terms")}</Link>
               <span>|</span>
-              <Link href="/#privacy" className="hover:text-black transition-colors">개인정보처리방침</Link>
+              <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
 

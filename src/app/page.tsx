@@ -1,18 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import Header from "../components/Header";
 import NewsletterForm from "../components/NewsletterForm";
 import { createClient } from "../utils/supabase/server";
+import { pickArticle, getTranslation, type TranslationKey } from "../utils/i18n";
 
 export const revalidate = 0;
 
 interface Article {
   id: string;
   title: string;
+  title_en?: string;
   summary: string;
+  summary_en?: string;
   category: string;
   tags: string | string[];
+  tags_en?: string | string[];
   image_url: string;
+  body_markdown?: string;
+  body_markdown_en?: string;
   created_at?: string;
 }
 
@@ -44,6 +51,10 @@ const MOCK_ARTICLES: Article[] = [
 ];
 
 export default async function Home() {
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value || "ko";
+  const t = getTranslation(locale);
+
   let articles: Article[] = [];
   const supabase = await createClient();
 
@@ -73,6 +84,11 @@ export default async function Home() {
     console.error("An unexpected error occurred while fetching articles:", err);
     articles = MOCK_ARTICLES;
   }
+
+  // Pick articles fields based on active locale
+  const translatedArticles = articles
+    .map((art) => pickArticle(art, locale))
+    .filter(Boolean) as Article[];
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -107,9 +123,15 @@ export default async function Home() {
     return null;
   };
 
-  const heroArticle = articles[0];
-  const sideArticles = articles.slice(1, 3);
-  const extraArticles = articles.slice(3);
+  const heroArticle = translatedArticles[0];
+  const sideArticles = translatedArticles.slice(1, 3);
+  const extraArticles = translatedArticles.slice(3);
+
+  // Translate category codes dynamically
+  const getTranslatedCategory = (cat: string) => {
+    const key = cat.toLowerCase() as TranslationKey;
+    return t(key) || cat;
+  };
 
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
@@ -122,7 +144,7 @@ export default async function Home() {
         {/* Editorial Subheader / Date */}
         <div className="flex justify-between items-end border-b border-neutral-200 pb-4 mb-12">
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
-            SIGHTSYNCH JOURNAL — ISSUE 01
+            {t("editorialSubheader")} — ISSUE 01
           </div>
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
             SEOUL / GLOBAL
@@ -152,7 +174,7 @@ export default async function Home() {
                 <div className="flex flex-wrap gap-3 items-center mb-4">
                   {heroArticle.category && (
                     <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                      {heroArticle.category}
+                      {getTranslatedCategory(heroArticle.category)}
                     </span>
                   )}
                   {renderTags(heroArticle.tags)}
@@ -203,7 +225,7 @@ export default async function Home() {
                     <div className="flex flex-wrap gap-3 items-center mb-3">
                       {article.category && (
                         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                          {article.category}
+                          {getTranslatedCategory(article.category)}
                         </span>
                       )}
                       {renderTags(article.tags)}
@@ -235,7 +257,7 @@ export default async function Home() {
         {extraArticles.length > 0 && (
           <div className="border-t border-neutral-200 pt-16 mt-16">
             <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 mb-12">
-              ARCHIVE / MORE ARTICLES
+              {t("archiveMore")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
               {extraArticles.map((article) => (
@@ -256,7 +278,7 @@ export default async function Home() {
                     <div className="flex flex-wrap gap-3 items-center mb-3">
                       {article.category && (
                         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                          {article.category}
+                          {getTranslatedCategory(article.category)}
                         </span>
                       )}
                       {renderTags(article.tags)}
@@ -283,16 +305,16 @@ export default async function Home() {
         {/* Footer info/Swiss-inspired Grid blocks */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 text-neutral-500 font-mono text-xs">
           <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">01 / BRAND EDITORIAL</span>
-            Curated analysis covering the intersections of luxury fashion, modern architecture, sound design, and beauty.
+            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot1Title")}</span>
+            {t("foot1Desc")}
           </div>
           <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">02 / ARCHIVE PRINT</span>
-            Available quarterly in selected global bookstores and high-end boutiques across Seoul, Tokyo, and Paris.
+            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot2Title")}</span>
+            {t("foot2Desc")}
           </div>
           <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">03 / DIGITAL SYNC</span>
-            Receive real-time synchronizations of high-fidelity visual culture directly via our dedicated newsletter.
+            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot3Title")}</span>
+            {t("foot3Desc")}
           </div>
         </div>
 
@@ -315,21 +337,21 @@ export default async function Home() {
             {/* Column 1: 카테고리 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
-                카테고리
+                {t("byCategory")}
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><Link href="/category/fashion" className="hover:text-black transition-colors">패션</Link></li>
-                <li><Link href="/category/art" className="hover:text-black transition-colors">미술</Link></li>
-                <li><Link href="/category/tech" className="hover:text-black transition-colors">테크</Link></li>
-                <li><Link href="/category/beauty" className="hover:text-black transition-colors">뷰티</Link></li>
-                <li><Link href="/category/lifestyle" className="hover:text-black transition-colors">라이프스타일</Link></li>
+                <li><Link href="/category/fashion" className="hover:text-black transition-colors">{t("fashion")}</Link></li>
+                <li><Link href="/category/art" className="hover:text-black transition-colors">{t("art")}</Link></li>
+                <li><Link href="/category/tech" className="hover:text-black transition-colors">{t("tech")}</Link></li>
+                <li><Link href="/category/beauty" className="hover:text-black transition-colors">{t("beauty")}</Link></li>
+                <li><Link href="/category/lifestyle" className="hover:text-black transition-colors">{t("lifestyle")}</Link></li>
               </ul>
             </div>
 
             {/* Column 2: 팔로우 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
-                팔로우
+                {t("follow")}
               </h3>
               <div className="flex gap-4 items-center text-neutral-600">
                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-black transition-colors" aria-label="Instagram">
@@ -361,13 +383,13 @@ export default async function Home() {
             {/* Column 3: 회사소개 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
-                회사소개
+                {t("company")}
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
-                <li><Link href="/#newsroom" className="hover:text-black transition-colors">뉴스룸</Link></li>
-                <li><Link href="/#careers" className="hover:text-black transition-colors">채용</Link></li>
-                <li><Link href="/#partnership" className="hover:text-black transition-colors">광고 및 제휴</Link></li>
-                <li><Link href="/#contact" className="hover:text-black transition-colors">연락처</Link></li>
+                <li><Link href="/#newsroom" className="hover:text-black transition-colors">{t("newsroom")}</Link></li>
+                <li><Link href="/#careers" className="hover:text-black transition-colors">{t("careers")}</Link></li>
+                <li><Link href="/#partnership" className="hover:text-black transition-colors">{t("partnership")}</Link></li>
+                <li><Link href="/#contact" className="hover:text-black transition-colors">{t("contact")}</Link></li>
               </ul>
             </div>
 
@@ -376,13 +398,13 @@ export default async function Home() {
               {/* Newsletter form */}
               <div className="mb-8">
                 <h3 className="text-xs font-bold tracking-widest mb-4 text-neutral-900 uppercase">
-                  NEWSLETTER
+                  {t("newsletterTitle")}
                 </h3>
                 <p className="text-xs text-neutral-500 mb-4 leading-relaxed font-medium">
-                  Sightsynch의 최신 소식을 이메일로 받아보세요.
+                  {t("newsletterDesc")}
                 </p>
                 {/* Dynamic Newsletter Form component */}
-                <NewsletterForm />
+                <NewsletterForm locale={locale} />
               </div>
 
               {/* App download buttons */}
@@ -399,12 +421,13 @@ export default async function Home() {
                     className="flex items-center gap-2 border border-neutral-300 px-4 py-2 hover:bg-neutral-50 hover:border-black transition-all"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.69-1.12 1.84-.98 2.94.12.01.19.02.26.02.92 0 2.01-.58 2.55-1.35" />
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.58 2.95-1.39" />
                     </svg>
                     <div className="text-[10px] font-bold text-left leading-none tracking-wider">
                       App Store
                     </div>
                   </a>
+
                   {/* Google Play */}
                   <a
                     href="https://play.google.com"
@@ -432,9 +455,9 @@ export default async function Home() {
               © 2026 Sightsynch Limited. All Rights Reserved.
             </p>
             <div className="flex gap-4 text-[10px] font-medium text-neutral-500 tracking-wider">
-              <Link href="/#terms" className="hover:text-black transition-colors">이용약관</Link>
+              <Link href="/#terms" className="hover:text-black transition-colors">{t("terms")}</Link>
               <span>|</span>
-              <Link href="/#privacy" className="hover:text-black transition-colors">개인정보처리방침</Link>
+              <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
 
