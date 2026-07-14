@@ -171,36 +171,12 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
 
         {/* Navigation Menu */}
         <nav className="hidden md:flex items-center space-x-10">
-          {/* 'Fashion' with Dropdown */}
-          <div className="relative group py-6">
-            <button className="flex items-center gap-1 text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase">
-              {t("fashion")}
-              <svg 
-                className="w-3.5 h-3.5 opacity-60 transition-transform group-hover:rotate-180 duration-200" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Sub-menu Dropdown */}
-            <div className="absolute top-[calc(100%-8px)] left-0 w-44 bg-white border border-neutral-200 shadow-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50">
-              <Link 
-                href="/category/fashion" 
-                className="block px-5 py-3.5 text-xs font-semibold tracking-wider text-neutral-800 hover:bg-neutral-50 hover:text-black border-b border-neutral-100"
-              >
-                {t("clothing")}
-              </Link>
-              <Link 
-                href="/category/fashion" 
-                className="block px-5 py-3.5 text-xs font-semibold tracking-wider text-neutral-800 hover:bg-neutral-50 hover:text-black"
-              >
-                {t("shoes")}
-              </Link>
-            </div>
-          </div>
+          <Link 
+            href="/category/fashion" 
+            className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
+          >
+            {t("fashion")}
+          </Link>
 
           <Link 
             href="/category/art" 
@@ -271,13 +247,7 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
 
           {/* GNB Navigation Links */}
           <div className="flex flex-col space-y-4 text-sm font-bold tracking-wider uppercase text-neutral-900">
-            <div className="space-y-2">
-              <span className="block text-neutral-400 text-xs tracking-widest font-black">{t("fashion")}</span>
-              <div className="pl-4 flex flex-col space-y-2 text-xs text-neutral-600 font-semibold">
-                <Link href="/category/fashion" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-black">{t("clothing")}</Link>
-                <Link href="/category/fashion" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-black">{t("shoes")}</Link>
-              </div>
-            </div>
+            <Link href="/category/fashion" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("fashion")}</Link>
             <Link href="/category/art" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("art")}</Link>
             <Link href="/category/tech" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("tech")}</Link>
             <Link href="/category/beauty" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("beauty")}</Link>
