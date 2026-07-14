@@ -28,26 +28,35 @@ interface Article {
 const MOCK_ARTICLES: Article[] = [
   {
     id: "mock-1",
-    title: "L’Oréal × Gucci: The New Synthesis of Luxury Beauty",
-    summary: "An exclusive editorial investigation into the intersection of heritage high-fashion couture and advanced cosmetic formulation, redefining luxury cosmetics for a new generation.",
+    title: "로레알 × 구찌: 럭셔리 뷰티의 새로운 합성",
+    title_en: "L’Oréal × Gucci: The New Synthesis of Luxury Beauty",
+    summary: "전통 고고학적 패션 하우스와 첨단 화장품 처방의 교차점에 대한 독점적인 에디토리얼 조사, 새로운 세대를 위한 럭셔리 화장품의 재정의.",
+    summary_en: "An exclusive editorial investigation into the intersection of heritage high-fashion couture and advanced cosmetic formulation, redefining luxury cosmetics for a new generation.",
     category: "패션",
     tags: ["로레알구찌"],
+    tags_en: ["LorealGucci"],
     image_url: "/hero_loreal_gucci.jpg"
   },
   {
     id: "mock-2",
-    title: "Abstract Symmetry: Kandinsky in the Digital Era",
-    summary: "Revisiting the geometric revolution of avant-garde modernism and its resonance in current immersive digital art experiences.",
+    title: "추상적인 대칭: 디지털 시대의 칸딘스키",
+    title_en: "Abstract Symmetry: Kandinsky in the Digital Era",
+    summary: "아방가르드 모더니즘의 기하학적 혁명과 몰입형 디지털 아트 경험에서의 대칭의 울림을 돌아봅니다.",
+    summary_en: "Revisiting the geometric revolution of avant-garde modernism and its resonance in current immersive digital art experiences.",
     category: "미술",
     tags: ["모던아트"],
+    tags_en: ["ModernArt"],
     image_url: "/hero_modern_art.jpg"
   },
   {
     id: "mock-3",
-    title: "The Acoustic Plexus: Minimalist Sound Design",
-    summary: "Crafting pure soundscapes through mechanical precision and understated industrial architecture in wireless audio.",
+    title: "음향 네크워크: 미니멀리스트 사운드 디자인",
+    title_en: "The Acoustic Plexus: Minimalist Sound Design",
+    summary: "무선 오디오에서 기계적 정밀함과 극도의 절제된 산업 아키텍처를 통해 순수한 사운드스케이프를 디자인합니다.",
+    summary_en: "Crafting pure soundscapes through mechanical precision and understated industrial architecture in wireless audio.",
     category: "테크",
     tags: ["무선헤드폰"],
+    tags_en: ["WirelessHeadphones"],
     image_url: "/hero_minimal_headphones.jpg"
   }
 ];
@@ -64,7 +73,7 @@ export default async function CategoryPage({ params }: PageProps) {
     notFound();
   }
 
-  const categoryInfo = CATEGORY_MAP[lowerSlug];
+  const map = CATEGORY_MAP[lowerSlug];
   const cookieStore = await cookies();
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
@@ -72,12 +81,14 @@ export default async function CategoryPage({ params }: PageProps) {
   let articles: Article[] = [];
   const supabase = await createClient();
 
+  // Accepted values matching database values (Korean), English labels, and variations of slugs
+  const accepted = [map.ko, map.en, lowerSlug, lowerSlug.toUpperCase(), slug];
+
   try {
-    // Querying with defensive filters matching the Korean database values, slugs, and casing variations
     const { data, error } = await supabase
       .from("articles")
       .select("*")
-      .in("category", [categoryInfo.ko, categoryInfo.en, lowerSlug, lowerSlug.toUpperCase()])
+      .in("category", accepted)
       .order("created_at", { ascending: false });
 
     const hasValidError = error && (
@@ -87,14 +98,14 @@ export default async function CategoryPage({ params }: PageProps) {
     );
 
     if (hasValidError) {
-      console.error(`Failed to fetch articles for category ${categoryInfo.ko}:`, error);
+      console.error(`Failed to fetch articles for category ${map.ko}:`, error);
       articles = MOCK_ARTICLES.filter(
-        a => a.category === categoryInfo.ko || a.category.toLowerCase() === lowerSlug
+        a => a.category === map.ko || a.category.toLowerCase() === lowerSlug
       );
     } else if (!data || data.length === 0) {
-      console.warn(`No articles returned for category ${categoryInfo.ko}. Using fallback mock data.`);
+      console.warn(`No articles returned for category ${map.ko}. Using fallback mock data.`);
       articles = MOCK_ARTICLES.filter(
-        a => a.category === categoryInfo.ko || a.category.toLowerCase() === lowerSlug
+        a => a.category === map.ko || a.category.toLowerCase() === lowerSlug
       );
     } else {
       articles = data;
@@ -102,7 +113,7 @@ export default async function CategoryPage({ params }: PageProps) {
   } catch (err) {
     console.error("An unexpected error occurred while fetching articles:", err);
     articles = MOCK_ARTICLES.filter(
-      a => a.category === categoryInfo.ko || a.category.toLowerCase() === lowerSlug
+      a => a.category === map.ko || a.category.toLowerCase() === lowerSlug
     );
   }
 
@@ -138,7 +149,7 @@ export default async function CategoryPage({ params }: PageProps) {
     return t(key) || cat;
   };
 
-  const categoryHeaderTitle = locale === "en" ? categoryInfo.en : categoryInfo.ko;
+  const categoryHeaderTitle = locale === "en" ? map.en : map.ko;
 
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
@@ -162,7 +173,7 @@ export default async function CategoryPage({ params }: PageProps) {
         {/* Dashboard Header */}
         <header className="mb-16 border-b border-neutral-200 pb-8">
           <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-400 block mb-3">
-            ARCHIVE / CATEGORY / {locale === "en" ? categoryInfo.en.toUpperCase() : categoryInfo.ko}
+            ARCHIVE / CATEGORY / {locale === "en" ? map.en.toUpperCase() : map.ko}
           </span>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none text-neutral-900 uppercase">
             {categoryHeaderTitle}

@@ -18,10 +18,10 @@ export interface ArticleInput {
 export function pickArticle(article: ArticleInput, locale: string) {
   if (!article) return null;
   const isEn = locale === "en";
-  const title = isEn ? (article.title_en ?? article.title) : article.title;
-  const summary = isEn ? (article.summary_en ?? article.summary) : article.summary;
-  const body = isEn ? (article.body_markdown_en ?? article.body_markdown) : article.body_markdown;
-  const tags = isEn ? (article.tags_en ?? article.tags) : article.tags;
+  const title = isEn ? (article.title_en && article.title_en.trim() !== "" ? article.title_en : article.title) : article.title;
+  const summary = isEn ? (article.summary_en && article.summary_en.trim() !== "" ? article.summary_en : article.summary) : article.summary;
+  const body = isEn ? (article.body_markdown_en && article.body_markdown_en.trim() !== "" ? article.body_markdown_en : article.body_markdown) : article.body_markdown;
+  const tags = isEn ? (article.tags_en && (Array.isArray(article.tags_en) ? article.tags_en.length > 0 : String(article.tags_en).trim() !== "") ? article.tags_en : article.tags) : article.tags;
 
   return {
     ...article,

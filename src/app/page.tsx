@@ -26,26 +26,35 @@ interface Article {
 const MOCK_ARTICLES: Article[] = [
   {
     id: "mock-1",
-    title: "L’Oréal × Gucci: The New Synthesis of Luxury Beauty",
-    summary: "An exclusive editorial investigation into the intersection of heritage high-fashion couture and advanced cosmetic formulation, redefining luxury cosmetics for a new generation.",
-    category: "FASHION",
+    title: "로레알 × 구찌: 럭셔리 뷰티의 새로운 합성",
+    title_en: "L’Oréal × Gucci: The New Synthesis of Luxury Beauty",
+    summary: "전통 고고학적 패션 하우스와 첨단 화장품 처방의 교차점에 대한 독점적인 에디토리얼 조사, 새로운 세대를 위한 럭셔리 화장품의 재정의.",
+    summary_en: "An exclusive editorial investigation into the intersection of heritage high-fashion couture and advanced cosmetic formulation, redefining luxury cosmetics for a new generation.",
+    category: "패션",
     tags: ["로레알구찌"],
+    tags_en: ["LorealGucci"],
     image_url: "/hero_loreal_gucci.jpg"
   },
   {
     id: "mock-2",
-    title: "Abstract Symmetry: Kandinsky in the Digital Era",
-    summary: "Revisiting the geometric revolution of avant-garde modernism and its resonance in current immersive digital art experiences.",
-    category: "ART",
+    title: "추상적인 대칭: 디지털 시대의 칸딘스키",
+    title_en: "Abstract Symmetry: Kandinsky in the Digital Era",
+    summary: "아방가르드 모더니즘의 기하학적 혁명과 몰입형 디지털 아트 경험에서의 대칭의 울림을 돌아봅니다.",
+    summary_en: "Revisiting the geometric revolution of avant-garde modernism and its resonance in current immersive digital art experiences.",
+    category: "미술",
     tags: ["모던아트"],
+    tags_en: ["ModernArt"],
     image_url: "/hero_modern_art.jpg"
   },
   {
     id: "mock-3",
-    title: "The Acoustic Plexus: Minimalist Sound Design",
-    summary: "Crafting pure soundscapes through mechanical precision and understated industrial architecture in wireless audio.",
-    category: "TECH",
+    title: "음향 네크워크: 미니멀리스트 사운드 디자인",
+    title_en: "The Acoustic Plexus: Minimalist Sound Design",
+    summary: "무선 오디오에서 기계적 정밀함과 극도의 절제된 산업 아키텍처를 통해 순수한 사운드스케이프를 디자인합니다.",
+    summary_en: "Crafting pure soundscapes through mechanical precision and understated industrial architecture in wireless audio.",
+    category: "테크",
     tags: ["무선헤드폰"],
+    tags_en: ["WirelessHeadphones"],
     image_url: "/hero_minimal_headphones.jpg"
   }
 ];
