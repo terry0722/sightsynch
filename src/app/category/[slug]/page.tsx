@@ -6,6 +6,7 @@ import Header from "../../../components/Header";
 import NewsletterForm from "../../../components/NewsletterForm";
 import { createClient } from "../../../utils/supabase/server";
 import { pickArticle, getTranslation, type TranslationKey } from "../../../utils/i18n";
+import { CATEGORY_MAP, isValidCategorySlug } from "../../../utils/categories";
 
 export const revalidate = 0;
 
@@ -24,20 +25,12 @@ interface Article {
   created_at?: string;
 }
 
-const CATEGORY_MAP: Record<string, { db: string; displayName: string }> = {
-  fashion: { db: "FASHION", displayName: "패션" },
-  art: { db: "ART", displayName: "미술" },
-  tech: { db: "TECH", displayName: "테크" },
-  beauty: { db: "BEAUTY", displayName: "뷰티" },
-  lifestyle: { db: "LIFESTYLE", displayName: "라이프스타일" },
-};
-
 const MOCK_ARTICLES: Article[] = [
   {
     id: "mock-1",
     title: "L’Oréal × Gucci: The New Synthesis of Luxury Beauty",
     summary: "An exclusive editorial investigation into the intersection of heritage high-fashion couture and advanced cosmetic formulation, redefining luxury cosmetics for a new generation.",
-    category: "FASHION",
+    category: "패션",
     tags: ["로레알구찌"],
     image_url: "/hero_loreal_gucci.jpg"
   },
@@ -45,7 +38,7 @@ const MOCK_ARTICLES: Article[] = [
     id: "mock-2",
     title: "Abstract Symmetry: Kandinsky in the Digital Era",
     summary: "Revisiting the geometric revolution of avant-garde modernism and its resonance in current immersive digital art experiences.",
-    category: "ART",
+    category: "미술",
     tags: ["모던아트"],
     image_url: "/hero_modern_art.jpg"
   },
@@ -53,7 +46,7 @@ const MOCK_ARTICLES: Article[] = [
     id: "mock-3",
     title: "The Acoustic Plexus: Minimalist Sound Design",
     summary: "Crafting pure soundscapes through mechanical precision and understated industrial architecture in wireless audio.",
-    category: "TECH",
+    category: "테크",
     tags: ["무선헤드폰"],
     image_url: "/hero_minimal_headphones.jpg"
   }
@@ -67,11 +60,11 @@ export default async function CategoryPage({ params }: PageProps) {
   const { slug } = await params;
   const lowerSlug = slug.toLowerCase();
 
-  const categoryInfo = CATEGORY_MAP[lowerSlug];
-  if (!categoryInfo) {
+  if (!isValidCategorySlug(lowerSlug)) {
     notFound();
   }
 
+  const categoryInfo = CATEGORY_MAP[lowerSlug];
   const cookieStore = await cookies();
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
@@ -80,10 +73,11 @@ export default async function CategoryPage({ params }: PageProps) {
   const supabase = await createClient();
 
   try {
+    // Querying with defensive filters matching the Korean database values, slugs, and casing variations
     const { data, error } = await supabase
       .from("articles")
       .select("*")
-      .eq("category", categoryInfo.db)
+      .in("category", [categoryInfo.ko, categoryInfo.en, lowerSlug, lowerSlug.toUpperCase()])
       .order("created_at", { ascending: false });
 
     const hasValidError = error && (
@@ -93,17 +87,23 @@ export default async function CategoryPage({ params }: PageProps) {
     );
 
     if (hasValidError) {
-      console.error(`Failed to fetch articles for category ${categoryInfo.db}:`, error);
-      articles = MOCK_ARTICLES.filter(a => a.category === categoryInfo.db);
+      console.error(`Failed to fetch articles for category ${categoryInfo.ko}:`, error);
+      articles = MOCK_ARTICLES.filter(
+        a => a.category === categoryInfo.ko || a.category.toLowerCase() === lowerSlug
+      );
     } else if (!data || data.length === 0) {
-      console.warn(`No articles returned for category ${categoryInfo.db}. Using fallback if available.`);
-      articles = MOCK_ARTICLES.filter(a => a.category === categoryInfo.db);
+      console.warn(`No articles returned for category ${categoryInfo.ko}. Using fallback mock data.`);
+      articles = MOCK_ARTICLES.filter(
+        a => a.category === categoryInfo.ko || a.category.toLowerCase() === lowerSlug
+      );
     } else {
       articles = data;
     }
   } catch (err) {
     console.error("An unexpected error occurred while fetching articles:", err);
-    articles = MOCK_ARTICLES.filter(a => a.category === categoryInfo.db);
+    articles = MOCK_ARTICLES.filter(
+      a => a.category === categoryInfo.ko || a.category.toLowerCase() === lowerSlug
+    );
   }
 
   const translatedArticles = articles
@@ -138,6 +138,8 @@ export default async function CategoryPage({ params }: PageProps) {
     return t(key) || cat;
   };
 
+  const categoryHeaderTitle = locale === "en" ? categoryInfo.en : categoryInfo.ko;
+
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
       <Header />
@@ -153,17 +155,17 @@ export default async function CategoryPage({ params }: PageProps) {
             {t("backToHome")}
           </Link>
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
-            SIGHTSYNCH JOURNAL — {getTranslatedCategory(categoryInfo.db)}
+            SIGHTSYNCH JOURNAL — {categoryHeaderTitle}
           </div>
         </div>
 
         {/* Dashboard Header */}
         <header className="mb-16 border-b border-neutral-200 pb-8">
           <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-400 block mb-3">
-            ARCHIVE / CATEGORY / {categoryInfo.db}
+            ARCHIVE / CATEGORY / {locale === "en" ? categoryInfo.en.toUpperCase() : categoryInfo.ko}
           </span>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none text-neutral-900 uppercase">
-            {getTranslatedCategory(categoryInfo.db)}
+            {categoryHeaderTitle}
           </h1>
         </header>
 
