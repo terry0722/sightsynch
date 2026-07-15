@@ -72,6 +72,24 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
       return;
     }
 
+    // Extract and validate extension
+    let ext = "";
+    const parts = file.name.split(".");
+    if (parts.length > 1) {
+      ext = parts.pop()?.toLowerCase() || "";
+    }
+    if (!ext) {
+      if (file.type === "image/png") ext = "png";
+      else if (file.type === "image/jpeg" || file.type === "image/jpg") ext = "jpg";
+      else if (file.type === "image/webp") ext = "webp";
+    }
+
+    const allowedExtensions = ["png", "jpg", "jpeg", "webp"];
+    if (!allowedExtensions.includes(ext)) {
+      alert("Only PNG, JPG, JPEG, and WEBP image files are allowed.");
+      return;
+    }
+
     setIsUploading(true);
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -82,12 +100,12 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
         return;
       }
 
-      const filePath = `${session.user.id}/${Date.now()}_${file.name}`;
+      const filePath = `${session.user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
       // Upload file to Supabase Storage bucket 'editor-pick-images'
       const { data, error } = await supabase.storage
         .from("editor-pick-images")
-        .upload(filePath, file);
+        .upload(filePath, file, { contentType: file.type, upsert: false });
 
       if (error) {
         console.error("Storage upload error:", error);
