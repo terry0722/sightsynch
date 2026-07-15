@@ -12,6 +12,7 @@ interface Profile {
   display_name?: string;
   avatar_url?: string;
   created_at?: string;
+  role?: string;
 }
 
 interface HeaderClientProps {
@@ -129,6 +130,7 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
               onClose={() => setIsAccountOpen(false)}
               user={user}
               profile={profile}
+              locale={locale}
             />
           </div>
 
@@ -215,6 +217,12 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
           >
             {t("lifestyle")}
           </Link>
+          <Link 
+            href="/editor" 
+            className="text-sm font-bold tracking-wider hover:text-neutral-500 transition-colors uppercase py-6"
+          >
+            {t("editorsPick")}
+          </Link>
         </nav>
 
         {/* Mobile Hamburger / X Button */}
@@ -267,7 +275,8 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
             <Link href="/category/art" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("art")}</Link>
             <Link href="/category/tech" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("tech")}</Link>
             <Link href="/category/beauty" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("beauty")}</Link>
-            <Link href="/category/lifestyle" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1">{t("lifestyle")}</Link>
+            <Link href="/category/lifestyle" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1 border-b border-neutral-100">{t("lifestyle")}</Link>
+            <Link href="/editor" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-neutral-500 py-1">{t("editorsPick")}</Link>
           </div>
 
           <hr className="border-neutral-200" />
@@ -289,6 +298,15 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
                     >
                       {t("myArchives")}
                     </Link>
+                    {(profile?.role === "editor" || profile?.role === "admin") && (
+                      <Link
+                        href="/editor/manage"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="text-xs font-bold text-neutral-600 hover:text-black uppercase tracking-wider"
+                      >
+                        {t("editorManage")}
+                      </Link>
+                    )}
                     <button
                       onClick={async () => {
                         const supabase = createClient();

@@ -4,13 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../utils/supabase/client";
-
+import { getTranslation } from "../utils/i18n";
 import { type User } from "@supabase/supabase-js";
 
 interface Profile {
   display_name?: string;
   avatar_url?: string;
   created_at?: string;
+  role?: string;
 }
 
 interface AccountPopoverProps {
@@ -18,10 +19,12 @@ interface AccountPopoverProps {
   onClose?: () => void;
   user: User | null;
   profile: Profile | null;
+  locale: string;
 }
 
-export default function AccountPopover({ isOpen, onClose, user, profile }: AccountPopoverProps) {
+export default function AccountPopover({ isOpen, onClose, user, profile, locale }: AccountPopoverProps) {
   const router = useRouter();
+  const t = getTranslation(locale);
 
   if (!isOpen) return null;
 
@@ -63,20 +66,32 @@ export default function AccountPopover({ isOpen, onClose, user, profile }: Accou
               onClick={onClose}
               className="hover:text-black transition-colors py-1.5"
             >
-              내 북마크 (My Archives)
+              {t("myArchives")}
             </Link>
+            {(profile?.role === "editor" || profile?.role === "admin") && (
+              <Link 
+                href="/editor/manage" 
+                onClick={onClose}
+                className="hover:text-black transition-colors py-1.5"
+              >
+                {t("editorManage")}
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="text-left hover:text-black transition-colors py-1.5 cursor-pointer uppercase tracking-wider font-bold"
             >
-              로그아웃 (Sign Out)
+              {t("logout")}
             </button>
           </div>
         </div>
       ) : (
         <div>
           <p className="text-xs text-neutral-500 mb-6 leading-relaxed normal-case font-medium">
-            Sightsynch 계정에 가입하고 다양한 기능과 혜택을 이용해보세요.
+            {locale === "en" 
+              ? "Join Sightsynch to experience more features and benefits." 
+              : "Sightsynch 계정에 가입하고 다양한 기능과 혜택을 이용해보세요."
+            }
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Link
@@ -85,14 +100,14 @@ export default function AccountPopover({ isOpen, onClose, user, profile }: Accou
               style={{ backgroundColor: "#F37021" }}
               className="text-white text-xs font-bold py-3 px-4 hover:opacity-90 transition-opacity uppercase tracking-wider rounded-none text-center block"
             >
-              회원가입
+              {t("signup")}
             </Link>
             <Link
               href="/login"
               onClick={onClose}
               className="bg-white text-neutral-900 border border-neutral-300 hover:border-black hover:bg-neutral-50 text-xs font-bold py-3 px-4 transition-all uppercase tracking-wider rounded-none text-center block"
             >
-              로그인
+              {t("login")}
             </Link>
           </div>
         </div>
