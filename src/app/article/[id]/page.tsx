@@ -244,6 +244,17 @@ export default async function ArticlePage({ params }: PageProps) {
                   <li className="text-base md:text-lg leading-relaxed">{children}</li>
                 ),
                 hr: () => <hr className="my-12 border-neutral-200" />,
+                img: ({ src, alt }) => (
+                  <figure className="my-8">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt={alt} className="max-w-full h-auto mx-auto rounded-lg" />
+                    {alt && (
+                      <figcaption className="text-center text-xs text-neutral-400 font-mono mt-3 uppercase tracking-wider">
+                        {alt}
+                      </figcaption>
+                    )}
+                  </figure>
+                ),
               }}
             >
               {article.body_markdown}

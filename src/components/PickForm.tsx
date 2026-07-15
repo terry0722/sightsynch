@@ -59,20 +59,17 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
   const [tagsString, setTagsString] = useState(getInitialTagsString());
 
   const [isUploading, setIsUploading] = useState(false);
+  const [isInsertingImage, setIsInsertingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadImageFile = async (file: File): Promise<string | null> => {
     // Size limit: 10MB
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize || !file.type.startsWith("image/")) {
       alert(t("uploadFailed"));
-      return;
+      return null;
     }
 
-    // Extract and validate extension
     let ext = "";
     const parts = file.name.split(".");
     if (parts.length > 1) {
@@ -87,43 +84,85 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
     const allowedExtensions = ["png", "jpg", "jpeg", "webp"];
     if (!allowedExtensions.includes(ext)) {
       alert("Only PNG, JPG, JPEG, and WEBP image files are allowed.");
-      return;
+      return null;
     }
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error("Session check error or no session:", sessionError);
+      alert("You must be logged in to upload images. Redirecting to login...");
+      router.push("/login");
+      return null;
+    }
+
+    const filePath = generateStoragePath(session.user.id, ext);
+
+    const { error } = await supabase.storage
+      .from("editor-pick-images")
+      .upload(filePath, file, { contentType: file.type, upsert: false });
+
+    if (error) {
+      console.error("Storage upload error:", error);
+      alert("Upload failed: " + error.message);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("editor-pick-images")
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     setIsUploading(true);
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error("Session check error or no session:", sessionError);
-        alert("You must be logged in to upload images. Redirecting to login...");
-        router.push("/login");
-        return;
-      }
-
-      const filePath = generateStoragePath(session.user.id, ext);
-
-      // Upload file to Supabase Storage bucket 'editor-pick-images'
-      const { data, error } = await supabase.storage
-        .from("editor-pick-images")
-        .upload(filePath, file, { contentType: file.type, upsert: false });
-
-      if (error) {
-        console.error("Storage upload error:", error);
-        alert("Upload failed: " + error.message);
-      } else if (data) {
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from("editor-pick-images")
-          .getPublicUrl(filePath);
-        
+      const publicUrl = await uploadImageFile(file);
+      if (publicUrl) {
         setCoverImageUrl(publicUrl);
       }
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.error("File upload error:", err);
-      alert("Error occurred during file upload: " + errMsg);
+      console.error("Cover image upload error:", err);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleInsertImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsInsertingImage(true);
+    try {
+      const publicUrl = await uploadImageFile(file);
+      if (publicUrl) {
+        const textarea = document.getElementById("body-markdown-textarea") as HTMLTextAreaElement | null;
+        if (textarea) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const text = textarea.value;
+          const before = text.substring(0, start);
+          const after = text.substring(end, text.length);
+          const markdownTag = `\n\n![${file.name.split(".")[0]}](` + publicUrl + `)\n\n`;
+          
+          setBodyMarkdown(before + markdownTag + after);
+          
+          setTimeout(() => {
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + markdownTag.length;
+          }, 50);
+        } else {
+          setBodyMarkdown((prev) => prev + `\n\n![${file.name.split(".")[0]}](` + publicUrl + `)\n\n`);
+        }
+      }
+    } catch (err) {
+      console.error("Inline image insertion error:", err);
+    } finally {
+      setIsInsertingImage(false);
+      e.target.value = "";
     }
   };
 
@@ -335,10 +374,44 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
 
         {/* Body Markdown Textarea */}
         <div className="space-y-2">
-          <label className="block text-xs font-mono uppercase tracking-widest text-neutral-400 font-bold">
-            {t("bodyMarkdown")}
-          </label>
+          <div className="flex justify-between items-center">
+            <label className="block text-xs font-mono uppercase tracking-widest text-neutral-400 font-bold">
+              {t("bodyMarkdown")}
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleInsertImage}
+                disabled={isInsertingImage || isSaving}
+                className="hidden"
+                id="inline-image-upload-input"
+              />
+              <label
+                htmlFor="inline-image-upload-input"
+                className="cursor-pointer bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 px-3 py-1.5 text-[10px] font-mono font-bold uppercase transition-colors flex items-center gap-1.5 select-none"
+              >
+                {isInsertingImage ? (
+                  <>
+                    <svg className="animate-spin h-3 w-3 text-neutral-600" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span>INSERTING...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3 h-3 text-neutral-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>INSERT IMAGE</span>
+                  </>
+                )}
+              </label>
+            </div>
+          </div>
           <textarea
+            id="body-markdown-textarea"
             value={bodyMarkdown}
             onChange={(e) => setBodyMarkdown(e.target.value)}
             disabled={isSaving}
@@ -436,6 +509,17 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
                   </ol>
                 ),
                 hr: () => <hr className="my-6 border-neutral-200" />,
+                img: ({ src, alt }) => (
+                  <figure className="my-6">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt={alt} className="max-w-full h-auto mx-auto rounded-lg" />
+                    {alt && (
+                      <figcaption className="text-center text-xs text-neutral-400 font-mono mt-2 uppercase tracking-wider">
+                        {alt}
+                      </figcaption>
+                    )}
+                  </figure>
+                ),
               }}
             >
               {bodyMarkdown || "*No content written yet.*"}
