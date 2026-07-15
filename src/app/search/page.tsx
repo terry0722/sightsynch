@@ -8,19 +8,17 @@ import { pickArticle, getTranslation, type TranslationKey } from "../../utils/i1
 
 export const revalidate = 0;
 
-interface Article {
+interface FeedItem {
   id: string;
+  sourceType: "article" | "editorpick";
+  href: string;
   title: string;
-  title_en?: string;
   summary: string;
-  summary_en?: string;
+  coverImageUrl: string;
   category: string;
   tags: string | string[];
-  tags_en?: string | string[];
-  image_url: string;
-  body_markdown?: string;
-  body_markdown_en?: string;
-  created_at?: string;
+  date: string;
+  authorName?: string;
 }
 
 interface SearchPageProps {
@@ -38,41 +36,83 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
 
-  let articles: Article[] = [];
+  let combinedResults: FeedItem[] = [];
 
   if (cleanQ) {
     try {
       const supabase = await createClient();
       const term = `%${cleanQ}%`;
       
-      const { data, error } = await supabase
-        .from("articles")
-        .select("*")
-        .or([
-          `title.ilike.${term}`,
-          `title_en.ilike.${term}`,
-          `summary.ilike.${term}`,
-          `summary_en.ilike.${term}`,
-          `body_markdown.ilike.${term}`,
-          `body_markdown_en.ilike.${term}`
-        ].join(","))
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const [articlesRes, picksRes] = await Promise.all([
+        supabase
+          .from("articles")
+          .select("*")
+          .or([
+            `title.ilike.${term}`,
+            `title_en.ilike.${term}`,
+            `summary.ilike.${term}`,
+            `summary_en.ilike.${term}`,
+            `body_markdown.ilike.${term}`,
+            `body_markdown_en.ilike.${term}`
+          ].join(","))
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("editor_picks")
+          .select("*")
+          .eq("status", "published")
+          .or([
+            `title.ilike.${term}`,
+            `subtitle.ilike.${term}`,
+            `body_markdown.ilike.${term}`
+          ].join(","))
+          .order("published_at", { ascending: false })
+          .limit(50)
+      ]);
 
-      if (error) {
-        console.error("Supabase search error:", error);
-      } else {
-        articles = data || [];
-      }
+      const articlesData = articlesRes.data || [];
+      const picksData = picksRes.data || [];
+
+      // Normalize articles
+      const normArticles: FeedItem[] = articlesData.map((art) => {
+        const picked = pickArticle(art, locale) || art;
+        return {
+          id: picked.id,
+          sourceType: "article",
+          href: `/article/${picked.id}`,
+          title: picked.title,
+          summary: picked.summary,
+          coverImageUrl: picked.image_url,
+          category: picked.category,
+          tags: picked.tags,
+          date: picked.created_at || new Date().toISOString()
+        };
+      });
+
+      // Normalize editor picks
+      const normPicks: FeedItem[] = picksData.map((pick) => {
+        return {
+          id: pick.id,
+          sourceType: "editorpick",
+          href: `/editor/${pick.id}`,
+          title: pick.title,
+          summary: pick.subtitle || pick.title,
+          coverImageUrl: pick.cover_image_url || "/hero_modern_art.jpg",
+          category: pick.category || "General",
+          tags: pick.tags || [],
+          date: pick.published_at || pick.created_at || new Date().toISOString(),
+          authorName: pick.author_name
+        };
+      });
+
+      // Combine and sort
+      combinedResults = [...normArticles, ...normPicks].sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
     } catch (err) {
       console.error("Search fetch failed:", err);
     }
   }
-
-  // Map translations to selected locale
-  const translatedArticles = articles
-    .map((art) => pickArticle(art, locale))
-    .filter(Boolean) as Article[];
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -131,7 +171,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           </h1>
           {cleanQ && (
             <p className="text-xs text-neutral-500 font-mono mt-3">
-              {translatedArticles.length} {t("searchResultsCount")}
+              {combinedResults.length} {t("searchResultsCount")}
             </p>
           )}
         </header>
@@ -156,17 +196,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </button>
             </form>
           </div>
-        ) : translatedArticles.length > 0 ? (
+        ) : combinedResults.length > 0 ? (
           /* Found results state */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 border-b border-neutral-200 pb-16 mb-16">
-            {translatedArticles.map((article) => (
-              <article key={article.id} className="flex flex-col justify-between group">
+            {combinedResults.map((item) => (
+              <article key={item.id} className="flex flex-col justify-between group">
                 <div>
                   {/* Image Link */}
-                  <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                  <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                     <Image
-                      src={article.image_url || "/hero_modern_art.jpg"}
-                      alt={article.title}
+                      src={item.coverImageUrl || "/hero_modern_art.jpg"}
+                      alt={item.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 30vw"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -176,21 +216,26 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   {/* Category & Tags */}
                   <div className="flex flex-wrap gap-3 items-center mb-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                      {getTranslatedCategory(article.category)}
+                      {getTranslatedCategory(item.category)}
                     </span>
-                    {renderTags(article.tags)}
+                    {item.sourceType === "editorpick" && (
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                        {"EDITOR'S PICK"}
+                      </span>
+                    )}
+                    {renderTags(item.tags)}
                   </div>
 
                   {/* Title Link */}
-                  <Link href={`/article/${article.id}`} className="block">
+                  <Link href={item.href} className="block">
                     <h2 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                      {article.title}
+                      {item.title}
                     </h2>
                   </Link>
 
                   {/* Summary */}
                   <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
-                    {article.summary}
+                    {item.summary}
                   </p>
                 </div>
               </article>

@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import Header from "../../../components/Header";
 import NewsletterForm from "../../../components/NewsletterForm";
-import { createClient } from "../../../utils/supabase/server";
 import { pickArticle, getTranslation, type TranslationKey } from "../../../utils/i18n";
 import { CATEGORY_MAP, isValidCategorySlug } from "../../../utils/categories";
+import { getMergedFeed, type FeedItem } from "../../../utils/feed";
 
 export const revalidate = 0;
 
@@ -78,48 +78,34 @@ export default async function CategoryPage({ params }: PageProps) {
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
 
-  let articles: Article[] = [];
-  const supabase = await createClient();
-
-  // Accepted values matching database values (Korean), English labels, and variations of slugs
-  const accepted = [map.ko, map.en, lowerSlug, lowerSlug.toUpperCase(), slug];
+  let feedItems: FeedItem[] = [];
 
   try {
-    const { data, error } = await supabase
-      .from("articles")
-      .select("*")
-      .in("category", accepted)
-      .order("created_at", { ascending: false });
-
-    const hasValidError = error && (
-      (error.message && typeof error.message === "string" && error.message.trim() !== "") ||
-      (error.code && typeof error.code === "string" && error.code.trim() !== "") ||
-      (Object.keys(error).length > 0)
-    );
-
-    if (hasValidError) {
-      console.error(`Failed to fetch articles for category ${map.ko}:`, error);
-      articles = MOCK_ARTICLES.filter(
-        a => a.category === map.ko || a.category.toLowerCase() === lowerSlug
-      );
-    } else if (!data || data.length === 0) {
-      console.warn(`No articles returned for category ${map.ko}. Using fallback mock data.`);
-      articles = MOCK_ARTICLES.filter(
-        a => a.category === map.ko || a.category.toLowerCase() === lowerSlug
-      );
-    } else {
-      articles = data;
-    }
+    feedItems = await getMergedFeed({ category: lowerSlug, locale });
   } catch (err) {
-    console.error("An unexpected error occurred while fetching articles:", err);
-    articles = MOCK_ARTICLES.filter(
-      a => a.category === map.ko || a.category.toLowerCase() === lowerSlug
-    );
+    console.error("Failed to load merged feed for category:", err);
   }
 
-  const translatedArticles = articles
-    .map((art) => pickArticle(art, locale))
-    .filter(Boolean) as Article[];
+  // Fallback if empty
+  if (!feedItems || feedItems.length === 0) {
+    const mockNorm = MOCK_ARTICLES
+      .filter(a => a.category === map.ko || a.category.toLowerCase() === lowerSlug)
+      .map((art) => {
+        const picked = pickArticle(art, locale) || art;
+        return {
+          id: picked.id,
+          sourceType: "article" as const,
+          href: `/article/${picked.id}`,
+          title: picked.title,
+          summary: picked.summary,
+          coverImageUrl: picked.image_url,
+          category: picked.category,
+          tags: picked.tags,
+          date: new Date().toISOString()
+        };
+      });
+    feedItems = mockNorm;
+  }
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -181,16 +167,16 @@ export default async function CategoryPage({ params }: PageProps) {
         </header>
 
         {/* Articles Grid */}
-        {translatedArticles.length > 0 ? (
+        {feedItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 border-b border-neutral-200 pb-16">
-            {translatedArticles.map((article) => (
-              <article key={article.id} className="flex flex-col justify-between group">
+            {feedItems.map((item) => (
+              <article key={item.id} className="flex flex-col justify-between group">
                 <div>
                   {/* Image Container */}
-                  <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                  <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                     <Image
-                      src={article.image_url || "/hero_modern_art.jpg"}
-                      alt={article.title}
+                      src={item.coverImageUrl || "/hero_modern_art.jpg"}
+                      alt={item.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 30vw"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -200,21 +186,26 @@ export default async function CategoryPage({ params }: PageProps) {
                   {/* Category & Tags */}
                   <div className="flex flex-wrap gap-3 items-center mb-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                      {getTranslatedCategory(article.category)}
+                      {getTranslatedCategory(item.category)}
                     </span>
-                    {renderTags(article.tags)}
+                    {item.sourceType === "editorpick" && (
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                        {"EDITOR'S PICK"}
+                      </span>
+                    )}
+                    {renderTags(item.tags)}
                   </div>
 
                   {/* Title */}
-                  <Link href={`/article/${article.id}`} className="block">
+                  <Link href={item.href} className="block">
                     <h2 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                      {article.title}
+                      {item.title}
                     </h2>
                   </Link>
 
                   {/* Summary */}
                   <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
-                    {article.summary}
+                    {item.summary}
                   </p>
                 </div>
               </article>

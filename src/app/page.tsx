@@ -3,8 +3,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import Header from "../components/Header";
 import NewsletterForm from "../components/NewsletterForm";
-import { createClient } from "../utils/supabase/server";
-import { pickArticle, getTranslation, type TranslationKey } from "../utils/i18n";
+import { getTranslation, type TranslationKey, pickArticle } from "../utils/i18n";
+import { getMergedFeed, type FeedItem } from "../utils/feed";
 
 export const revalidate = 0;
 
@@ -64,40 +64,32 @@ export default async function Home() {
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
 
-  let articles: Article[] = [];
-  const supabase = await createClient();
+  let feed: FeedItem[] = [];
+
+  const normalizeMock = (art: Article): FeedItem => {
+    const picked = pickArticle(art, locale) || art;
+    return {
+      id: picked.id,
+      sourceType: "article",
+      href: `/article/${picked.id}`,
+      title: picked.title,
+      summary: picked.summary,
+      coverImageUrl: picked.image_url,
+      category: picked.category,
+      tags: picked.tags,
+      date: new Date().toISOString()
+    };
+  };
 
   try {
-    const { data, error } = await supabase
-      .from("articles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    // Check if error is a valid error object with actual content
-    const hasValidError = error && (
-      (error.message && typeof error.message === "string" && error.message.trim() !== "") ||
-      (error.code && typeof error.code === "string" && error.code.trim() !== "") ||
-      (Object.keys(error).length > 0)
-    );
-
-    if (hasValidError) {
-      console.error("Failed to fetch articles from Supabase:", error);
-      articles = MOCK_ARTICLES;
-    } else if (!data || data.length === 0) {
-      console.warn("No articles returned from Supabase. Falling back to mock data.");
-      articles = MOCK_ARTICLES;
-    } else {
-      articles = data;
-    }
+    feed = await getMergedFeed({ locale });
   } catch (err) {
-    console.error("An unexpected error occurred while fetching articles:", err);
-    articles = MOCK_ARTICLES;
+    console.error("Failed to load merged feed:", err);
   }
 
-  // Pick articles fields based on active locale
-  const translatedArticles = articles
-    .map((art) => pickArticle(art, locale))
-    .filter(Boolean) as Article[];
+  if (!feed || feed.length === 0) {
+    feed = MOCK_ARTICLES.map(normalizeMock);
+  }
 
   const renderTags = (tags: string | string[] | null | undefined) => {
     if (!tags) return null;
@@ -132,9 +124,9 @@ export default async function Home() {
     return null;
   };
 
-  const heroArticle = translatedArticles[0];
-  const sideArticles = translatedArticles.slice(1, 3);
-  const extraArticles = translatedArticles.slice(3);
+  const heroItem = feed[0];
+  const sideItems = feed.slice(1, 3);
+  const extraItems = feed.slice(3);
 
   // Translate category codes dynamically
   const getTranslatedCategory = (cat: string) => {
@@ -149,7 +141,7 @@ export default async function Home() {
 
       {/* Main Content & Hero Section */}
       <main className="max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20">
-        
+
         {/* Editorial Subheader / Date */}
         <div className="flex justify-between items-end border-b border-neutral-200 pb-4 mb-12">
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
@@ -162,16 +154,16 @@ export default async function Home() {
 
         {/* Asymmetric Hero Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border-b border-neutral-200">
-          
+
           {/* Left Column: Largest Main Article Card (col-span-7) */}
-          {heroArticle ? (
+          {heroItem ? (
             <article className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex flex-col justify-between group">
               <div>
                 {/* Image Container */}
-                <Link href={`/article/${heroArticle.id}`} className="block relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200">
+                <Link href={heroItem.href} className="block relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-8 border border-neutral-200">
                   <Image
-                    src={heroArticle.image_url || "/hero_loreal_gucci.jpg"}
-                    alt={heroArticle.title}
+                    src={heroItem.coverImageUrl || "/hero_loreal_gucci.jpg"}
+                    alt={heroItem.title}
                     fill
                     sizes="(max-width: 1024px) 100vw, 55vw"
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -181,24 +173,29 @@ export default async function Home() {
 
                 {/* Category & Tags */}
                 <div className="flex flex-wrap gap-3 items-center mb-4">
-                  {heroArticle.category && (
+                  {heroItem.category && (
                     <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                      {getTranslatedCategory(heroArticle.category)}
+                      {getTranslatedCategory(heroItem.category)}
                     </span>
                   )}
-                  {renderTags(heroArticle.tags)}
+                  {heroItem.sourceType === "editorpick" && (
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                      {"EDITOR'S PICK"}
+                    </span>
+                  )}
+                  {renderTags(heroItem.tags)}
                 </div>
 
                 {/* Title */}
-                <Link href={`/article/${heroArticle.id}`} className="block">
+                <Link href={heroItem.href} className="block">
                   <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
-                    {heroArticle.title}
+                    {heroItem.title}
                   </h1>
                 </Link>
 
                 {/* Summary */}
                 <p className="text-base md:text-lg leading-relaxed text-neutral-600 font-normal max-w-2xl mb-8">
-                  {heroArticle.summary}
+                  {heroItem.summary}
                 </p>
               </div>
             </article>
@@ -210,20 +207,19 @@ export default async function Home() {
 
           {/* Right Column: 2 Medium Article Cards stacked (col-span-5) */}
           <div className="lg:col-span-5 lg:pl-12 flex flex-col divide-y divide-neutral-200">
-            {sideArticles.length > 0 ? (
-              sideArticles.map((article, index) => (
-                <article 
-                  key={article.id} 
-                  className={`flex flex-col justify-between group ${
-                    index === 0 ? "pb-12 lg:pb-16 pt-12 lg:pt-0" : "pt-12 lg:pt-16 pb-12"
-                  }`}
+            {sideItems.length > 0 ? (
+              sideItems.map((item, index) => (
+                <article
+                  key={item.id}
+                  className={`flex flex-col justify-between group ${index === 0 ? "pb-12 lg:pb-16 pt-12 lg:pt-0" : "pt-12 lg:pt-16 pb-12"
+                    }`}
                 >
                   <div>
                     {/* Image Container */}
-                    <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                    <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                       <Image
-                        src={article.image_url || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
-                        alt={article.title}
+                        src={item.coverImageUrl || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
+                        alt={item.title}
                         fill
                         sizes="(max-width: 1024px) 100vw, 40vw"
                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -232,24 +228,29 @@ export default async function Home() {
 
                     {/* Category & Tags */}
                     <div className="flex flex-wrap gap-3 items-center mb-3">
-                      {article.category && (
+                      {item.category && (
                         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                          {getTranslatedCategory(article.category)}
+                          {getTranslatedCategory(item.category)}
                         </span>
                       )}
-                      {renderTags(article.tags)}
+                      {item.sourceType === "editorpick" && (
+                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                          {"EDITOR'S PICK"}
+                        </span>
+                      )}
+                      {renderTags(item.tags)}
                     </div>
 
                     {/* Title */}
-                    <Link href={`/article/${article.id}`} className="block">
+                    <Link href={item.href} className="block">
                       <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                        {article.title}
+                        {item.title}
                       </h2>
                     </Link>
 
                     {/* Summary */}
                     <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
-                      {article.summary}
+                      {item.summary}
                     </p>
                   </div>
                 </article>
@@ -263,20 +264,20 @@ export default async function Home() {
         </div>
 
         {/* Remaining Articles Grid */}
-        {extraArticles.length > 0 && (
+        {extraItems.length > 0 && (
           <div className="border-t border-neutral-200 pt-16 mt-16">
             <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 mb-12">
               {t("archiveMore")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-              {extraArticles.map((article) => (
-                <article key={article.id} className="flex flex-col justify-between group">
+              {extraItems.map((item) => (
+                <article key={item.id} className="flex flex-col justify-between group">
                   <div>
                     {/* Image Container */}
-                    <Link href={`/article/${article.id}`} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
+                    <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
                       <Image
-                        src={article.image_url || "/hero_modern_art.jpg"}
-                        alt={article.title}
+                        src={item.coverImageUrl || "/hero_modern_art.jpg"}
+                        alt={item.title}
                         fill
                         sizes="(max-width: 768px) 100vw, 30vw"
                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -285,24 +286,29 @@ export default async function Home() {
 
                     {/* Category & Tags */}
                     <div className="flex flex-wrap gap-3 items-center mb-3">
-                      {article.category && (
+                      {item.category && (
                         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                          {getTranslatedCategory(article.category)}
+                          {getTranslatedCategory(item.category)}
                         </span>
                       )}
-                      {renderTags(article.tags)}
+                      {item.sourceType === "editorpick" && (
+                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                          {"EDITOR'S PICK"}
+                        </span>
+                      )}
+                      {renderTags(item.tags)}
                     </div>
 
                     {/* Title */}
-                    <Link href={`/article/${article.id}`} className="block">
+                    <Link href={item.href} className="block">
                       <h3 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                        {article.title}
+                        {item.title}
                       </h3>
                     </Link>
 
                     {/* Summary */}
                     <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
-                      {article.summary}
+                      {item.summary}
                     </p>
                   </div>
                 </article>
@@ -332,7 +338,7 @@ export default async function Home() {
       {/* Footer */}
       <footer className="bg-white border-t border-neutral-200 py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-6 md:px-12">
-          
+
           {/* Footer Logo */}
           <div className="mb-12">
             <Link href="/" className="text-3xl font-black tracking-[0.15em] lowercase hover:opacity-80 transition-opacity">
@@ -342,7 +348,7 @@ export default async function Home() {
 
           {/* 6-Column Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-12 md:gap-8 mb-16">
-            
+
             {/* Column 1: 카테고리 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">

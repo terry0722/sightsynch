@@ -21,20 +21,20 @@ interface EditorPick {
 
 interface PickFormProps {
   initialData?: EditorPick;
-  userId: string;
   locale: string;
 }
 
 const CATEGORIES = ["패션", "미술", "테크", "뷰티", "라이프스타일"];
 
-function generateStoragePath(userId: string, originalName: string): string {
-  const fileExt = originalName.split(".").pop();
-  const sanitizedName = originalName.replace(/[^a-zA-Z0-9]/g, "_");
-  const filename = `${new Date().getTime()}_${sanitizedName}.${fileExt}`;
-  return `${userId}/${filename}`;
+function generateStoragePath(userId: string, ext: string): string {
+  const timestamp = new Date().getTime();
+  const uuid = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).substring(2);
+  return `${userId}/${timestamp}-${uuid}.${ext}`;
 }
 
-export default function PickForm({ initialData, userId, locale }: PickFormProps) {
+export default function PickForm({ initialData, locale }: PickFormProps) {
   const router = useRouter();
   const t = getTranslation(locale);
 
@@ -100,7 +100,7 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
         return;
       }
 
-      const filePath = `${session.user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      const filePath = generateStoragePath(session.user.id, ext);
 
       // Upload file to Supabase Storage bucket 'editor-pick-images'
       const { data, error } = await supabase.storage
@@ -118,9 +118,10 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
         
         setCoverImageUrl(publicUrl);
       }
-    } catch (err: any) {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       console.error("File upload error:", err);
-      alert("Error occurred during file upload: " + (err.message || err));
+      alert("Error occurred during file upload: " + errMsg);
     } finally {
       setIsUploading(false);
     }
@@ -205,9 +206,10 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
           router.refresh();
         }
       }
-    } catch (err: any) {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       console.error("Save error:", err);
-      alert("An unexpected error occurred while saving: " + (err.message || err));
+      alert("An unexpected error occurred while saving: " + errMsg);
     } finally {
       setIsSaving(false);
     }

@@ -42,7 +42,6 @@ export default async function NewPickPage() {
         </div>
 
         <PickForm 
-          userId={user.id} 
           locale={locale} 
         />
       </main>

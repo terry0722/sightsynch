@@ -64,7 +64,6 @@ export default async function EditPickPage({ params }: PageProps) {
 
         <PickForm 
           initialData={pick} 
-          userId={user.id} 
           locale={locale} 
         />
       </main>
