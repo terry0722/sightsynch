@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { createClient } from "../utils/supabase/client";
+import { supabase } from "../utils/supabase/client";
 import { getTranslation, type TranslationKey } from "../utils/i18n";
 
 interface EditorPick {
@@ -37,7 +37,6 @@ function generateStoragePath(userId: string, originalName: string): string {
 export default function PickForm({ initialData, userId, locale }: PickFormProps) {
   const router = useRouter();
   const t = getTranslation(locale);
-  const supabase = createClient();
 
   const [title, setTitle] = useState(initialData?.title || "");
   const [subtitle, setSubtitle] = useState(initialData?.subtitle || "");
@@ -75,16 +74,24 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
 
     setIsUploading(true);
     try {
-      const filePath = generateStoragePath(userId, file.name);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error("Session check error or no session:", sessionError);
+        alert("You must be logged in to upload images. Redirecting to login...");
+        router.push("/login");
+        return;
+      }
+
+      const filePath = `${session.user.id}/${Date.now()}_${file.name}`;
 
       // Upload file to Supabase Storage bucket 'editor-pick-images'
       const { data, error } = await supabase.storage
         .from("editor-pick-images")
-        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+        .upload(filePath, file);
 
       if (error) {
         console.error("Storage upload error:", error);
-        alert(error.message);
+        alert("Upload failed: " + error.message);
       } else if (data) {
         // Get public URL
         const { data: { publicUrl } } = supabase.storage
@@ -93,9 +100,9 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
         
         setCoverImageUrl(publicUrl);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error occurred during file upload.");
+    } catch (err: any) {
+      console.error("File upload error:", err);
+      alert("Error occurred during file upload: " + (err.message || err));
     } finally {
       setIsUploading(false);
     }
@@ -126,6 +133,14 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
     };
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error("Session check error or no session:", sessionError);
+        alert("You must be logged in to save. Redirecting to login...");
+        router.push("/login");
+        return;
+      }
+
       if (initialData?.id) {
         // Edit mode: update existing pick
         const { error } = await supabase
@@ -135,43 +150,46 @@ export default function PickForm({ initialData, userId, locale }: PickFormProps)
 
         if (error) {
           console.error("Update error:", error);
-          alert(error.message);
+          alert("Failed to update post: " + error.message);
         } else {
           router.push("/editor/manage");
           router.refresh();
         }
       } else {
         // Create mode: get current user name to set author_name
-        const { data: { user } } = await supabase.auth.getUser();
         let authorName = "Editor";
-        if (user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("display_name")
-            .eq("id", user.id)
-            .single();
-          authorName = profile?.display_name || user.email?.split("@")[0] || "Editor";
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
         }
+
+        authorName = profile?.display_name || session.user.email || "Editor";
 
         const { error } = await supabase
           .from("editor_picks")
           .insert({
             ...pickData,
-            author_id: userId,
+            author_id: session.user.id,
             author_name: authorName,
             created_at: new Date().toISOString()
           });
 
         if (error) {
           console.error("Insert error:", error);
-          alert(error.message);
+          alert("Failed to publish post: " + error.message);
         } else {
           router.push("/editor/manage");
           router.refresh();
         }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Save error:", err);
+      alert("An unexpected error occurred while saving: " + (err.message || err));
     } finally {
       setIsSaving(false);
     }
