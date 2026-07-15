@@ -147,7 +147,7 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
       body_markdown: bodyMarkdown,
       cover_image_url: coverImageUrl,
       status,
-      published_at: status === "published" ? new Date().toISOString() : null,
+      published_at: status === "published" ? (initialData?.published_at || new Date().toISOString()) : null,
       updated_at: new Date().toISOString()
     };
 
