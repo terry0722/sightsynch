@@ -90,6 +90,11 @@ const DICTIONARY: Record<string, Record<string, string>> = {
     foot3Desc: "고해상도 비주얼 컬처에 대한 실시간 동기화 소식을 뉴스레터를 통해 이메일로 받아보세요.",
     terms: "이용약관",
     privacy: "개인정보처리방침",
+    searchTitle: "검색 결과",
+    searchResultsCount: "건의 결과 발견됨",
+    noResults: "에 대한 결과가 없습니다.",
+    searchPrompt: "검색어를 입력하세요",
+    searchBoxPlaceholder: "검색하고 싶은 키워드를 입력해 주세요",
   },
   en: {
     // Header Categories
@@ -147,6 +152,11 @@ const DICTIONARY: Record<string, Record<string, string>> = {
     foot3Desc: "Receive real-time synchronizations of high-fidelity visual culture directly via our dedicated newsletter.",
     terms: "Terms of Use",
     privacy: "Privacy Policy",
+    searchTitle: "Search Results",
+    searchResultsCount: "results found",
+    noResults: "No results found for",
+    searchPrompt: "Please enter a search term",
+    searchBoxPlaceholder: "Type keywords to search...",
   }
 };
 

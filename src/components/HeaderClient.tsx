@@ -67,27 +67,40 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
     router.refresh();
   };
 
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const query = (formData.get("q") as string || "").trim();
+    if (query) {
+      router.push(`/search?q=${encodeURIComponent(query)}`);
+      setIsMobileMenuOpen(false);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200">
       {/* 1. Top Utility Bar (Desktop) */}
       <div className="hidden md:flex h-12 border-b border-neutral-200 bg-white items-center justify-between max-w-7xl mx-auto px-6 md:px-12">
         {/* Search Bar */}
-        <div className="flex items-center w-full max-w-sm">
-          <svg 
-            className="w-4 h-4 text-neutral-400 mr-2 shrink-0" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+        <form onSubmit={handleSearchSubmit} className="flex items-center w-full max-w-sm">
+          <button type="submit" aria-label="Search" className="flex items-center">
+            <svg 
+              className="w-4 h-4 text-neutral-400 mr-2 shrink-0 hover:text-black transition-colors cursor-pointer" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
           <input
             type="text"
+            name="q"
             placeholder={t("searchPlaceholder")}
             className="w-full bg-transparent text-xs text-neutral-900 placeholder-neutral-400 outline-none border-b border-transparent focus:border-neutral-400 py-1 transition-colors font-medium"
           />
-        </div>
+        </form>
 
         {/* Right Menu (Account & Language) */}
         <div className="flex items-center space-x-6 text-xs font-bold uppercase tracking-wider text-neutral-800">
@@ -228,22 +241,25 @@ export default function HeaderClient({ user, profile, locale }: HeaderClientProp
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-neutral-200 bg-white w-full px-6 py-8 space-y-8">
           {/* Mobile Search Bar */}
-          <div className="flex items-center w-full border border-neutral-300 px-3 py-2.5 bg-neutral-50">
-            <svg 
-              className="w-4 h-4 text-neutral-400 mr-2 shrink-0" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <form onSubmit={handleSearchSubmit} className="flex items-center w-full border border-neutral-300 px-3 py-2.5 bg-neutral-50">
+            <button type="submit" aria-label="Search" className="flex items-center">
+              <svg 
+                className="w-4 h-4 text-neutral-400 mr-2 shrink-0 hover:text-black transition-colors cursor-pointer" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
             <input
               type="text"
+              name="q"
               placeholder={t("searchPlaceholder")}
               className="w-full bg-transparent text-xs text-neutral-900 placeholder-neutral-400 outline-none font-medium"
             />
-          </div>
+          </form>
 
           {/* GNB Navigation Links */}
           <div className="flex flex-col space-y-4 text-sm font-bold tracking-wider uppercase text-neutral-900">
