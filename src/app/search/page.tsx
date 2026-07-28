@@ -5,6 +5,7 @@ import Header from "../../components/Header";
 import NewsletterForm from "../../components/NewsletterForm";
 import { createClient } from "../../utils/supabase/server";
 import { pickArticle, getTranslation, type TranslationKey } from "../../utils/i18n";
+import ImageCredit from "../../components/ImageCredit";
 
 export const revalidate = 0;
 
@@ -203,15 +204,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               <article key={item.id} className="flex flex-col justify-between group">
                 <div>
                   {/* Image Link */}
-                  <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 mb-6 border border-neutral-200">
-                    <Image
-                      src={item.coverImageUrl || "/hero_modern_art.jpg"}
-                      alt={item.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 30vw"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                    />
-                  </Link>
+                  <div className="mb-6">
+                    <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
+                      <Image
+                        src={item.coverImageUrl || "/hero_modern_art.jpg"}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 30vw"
+                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                      />
+                    </Link>
+                    <ImageCredit />
+                  </div>
 
                   {/* Category & Tags */}
                   <div className="flex flex-wrap gap-3 items-center mb-3">

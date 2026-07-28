@@ -8,6 +8,7 @@ import NewsletterForm from "../../../components/NewsletterForm";
 import { createClient } from "../../../utils/supabase/server";
 import { getTranslation, type TranslationKey } from "../../../utils/i18n";
 import { getCurrentProfile, isStaff } from "../../../utils/auth";
+import ImageCredit from "../../../components/ImageCredit";
 
 export const revalidate = 0;
 
@@ -136,13 +137,16 @@ export default async function EditorPickDetailPage({ params }: PageProps) {
 
         {/* Cover Image */}
         {pick.cover_image_url && (
-          <div className="w-full h-64 md:h-[28rem] relative mb-12 max-w-5xl mx-auto">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={pick.cover_image_url}
-              alt={pick.title}
-              className="object-cover w-full h-full rounded-lg"
-            />
+          <div className="w-full mb-12 max-w-5xl mx-auto">
+            <div className="w-full h-64 md:h-[28rem] relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={pick.cover_image_url}
+                alt={pick.title}
+                className="object-cover w-full h-full rounded-lg"
+              />
+            </div>
+            <ImageCredit className="text-center md:text-left" />
           </div>
         )}
 
@@ -216,6 +220,7 @@ export default async function EditorPickDetailPage({ params }: PageProps) {
                         {alt}
                       </figcaption>
                     )}
+                    <ImageCredit className="text-center" />
                   </figure>
                 ),
               }}

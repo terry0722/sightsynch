@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { supabase } from "../utils/supabase/client";
 import { getTranslation, type TranslationKey } from "../utils/i18n";
+import ImageCredit from "./ImageCredit";
 
 interface EditorPick {
   id?: string;
@@ -465,9 +466,12 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
           )}
 
           {coverImageUrl && (
-            <div className="w-full aspect-[3/2] relative border border-neutral-200 mb-8">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={coverImageUrl} alt="Preview Cover" className="object-cover w-full h-full" />
+            <div className="w-full mb-8">
+              <div className="w-full aspect-[3/2] relative border border-neutral-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverImageUrl} alt="Preview Cover" className="object-cover w-full h-full" />
+              </div>
+              <ImageCredit className="text-center" />
             </div>
           )}
 
@@ -518,6 +522,7 @@ export default function PickForm({ initialData, locale }: PickFormProps) {
                         {alt}
                       </figcaption>
                     )}
+                    <ImageCredit className="text-center" />
                   </figure>
                 ),
               }}

@@ -8,6 +8,7 @@ import ArticleActions from "../../../components/ArticleActions";
 import NewsletterForm from "../../../components/NewsletterForm";
 import { createClient } from "../../../utils/supabase/server";
 import { pickArticle, getTranslation, type TranslationKey } from "../../../utils/i18n";
+import ImageCredit from "../../../components/ImageCredit";
 
 export const revalidate = 0;
 
@@ -173,13 +174,16 @@ export default async function ArticlePage({ params }: PageProps) {
 
         {/* 기사 썸네일 이미지 출력 예시 */}
         {article.image_url && (
-          <div className="w-full h-64 md:h-[28rem] relative mb-6 max-w-5xl mx-auto">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={article.image_url}
-              alt={article.title}
-              className="object-cover w-full h-full rounded-lg"
-            />
+          <div className="w-full mb-6 max-w-5xl mx-auto">
+            <div className="w-full h-64 md:h-[28rem] relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={article.image_url}
+                alt={article.title}
+                className="object-cover w-full h-full rounded-lg"
+              />
+            </div>
+            <ImageCredit className="text-center md:text-left" />
           </div>
         )}
 
@@ -253,6 +257,7 @@ export default async function ArticlePage({ params }: PageProps) {
                         {alt}
                       </figcaption>
                     )}
+                    <ImageCredit className="text-center" />
                   </figure>
                 ),
               }}
