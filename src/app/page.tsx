@@ -1,13 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import Header from "../components/Header";
 import NewsletterForm from "../components/NewsletterForm";
+import Pagination from "../components/Pagination";
 import { getTranslation, type TranslationKey, pickArticle } from "../utils/i18n";
 import { getMergedFeed, type FeedItem } from "../utils/feed";
 import ImageCredit from "../components/ImageCredit";
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 interface Article {
   id: string;
@@ -60,12 +63,50 @@ const MOCK_ARTICLES: Article[] = [
   }
 ];
 
-export default async function Home() {
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const resolvedParams = await searchParams;
+  const pageRaw = resolvedParams.page;
+  const page = Math.max(1, Math.floor(Number(Array.isArray(pageRaw) ? pageRaw[0] : pageRaw) || 1));
+
+  const baseTitle = "SIGHTSYNCH — Fashion, Art & Technology Editorial";
+  const title = page > 1 ? `${baseTitle} — 페이지 ${page}` : baseTitle;
+  const canonicalUrl = page > 1 ? `/?page=${page}` : "/";
+
+  return {
+    title,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+  };
+}
+
+export default async function Home({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams;
+  const pageRaw = resolvedSearchParams.page;
+  const pageNumber = Math.max(1, Math.floor(Number(Array.isArray(pageRaw) ? pageRaw[0] : pageRaw) || 1));
+
   const cookieStore = await cookies();
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
 
-  let feed: FeedItem[] = [];
+  let feedItems: FeedItem[] = [];
+  let totalCount = 0;
+  let totalPages = 1;
+  let currentPage = 1;
+
+  try {
+    const feedResult = await getMergedFeed({ page: pageNumber, locale });
+    feedItems = feedResult.items;
+    totalCount = feedResult.totalCount;
+    totalPages = feedResult.totalPages;
+    currentPage = feedResult.currentPage;
+  } catch (err) {
+    console.error("Failed to load merged feed:", err);
+  }
 
   const normalizeMock = (art: Article): FeedItem => {
     const picked = pickArticle(art, locale) || art;
@@ -82,14 +123,14 @@ export default async function Home() {
     };
   };
 
-  try {
-    feed = await getMergedFeed({ locale });
-  } catch (err) {
-    console.error("Failed to load merged feed:", err);
+  if ((!feedItems || feedItems.length === 0) && pageNumber === 1 && totalCount === 0) {
+    feedItems = MOCK_ARTICLES.map(normalizeMock);
+    totalCount = feedItems.length;
+    totalPages = 1;
   }
 
-  if (!feed || feed.length === 0) {
-    feed = MOCK_ARTICLES.map(normalizeMock);
+  if (pageNumber > totalPages) {
+    notFound();
   }
 
   const renderTags = (tags: string | string[] | null | undefined) => {
@@ -125,11 +166,10 @@ export default async function Home() {
     return null;
   };
 
-  const heroItem = feed[0];
-  const sideItems = feed.slice(1, 3);
-  const extraItems = feed.slice(3);
+  const heroItem = pageNumber === 1 ? feedItems[0] : null;
+  const sideItems = pageNumber === 1 ? feedItems.slice(1, 3) : [];
+  const extraItems = pageNumber === 1 ? feedItems.slice(3) : feedItems;
 
-  // Translate category codes dynamically
   const getTranslatedCategory = (cat: string) => {
     const key = cat.toLowerCase() as TranslationKey;
     return t(key) || cat;
@@ -137,150 +177,141 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased selection:bg-[#111111] selection:text-white">
-      {/* Interactive Header with Top Utility Bar */}
       <Header />
 
-      {/* Main Content & Hero Section */}
       <main className="max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20">
-
         {/* Editorial Subheader / Date */}
         <div className="flex justify-between items-end border-b border-neutral-200 pb-4 mb-12">
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
-            {t("editorialSubheader")} — ISSUE 01
+            {t("editorialSubheader")} — ISSUE 01 {pageNumber > 1 ? `(PAGE ${pageNumber})` : ""}
           </div>
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
             SEOUL / GLOBAL
           </div>
         </div>
 
-        {/* Asymmetric Hero Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border-b border-neutral-200">
-
-          {/* Left Column: Largest Main Article Card (col-span-7) */}
-          {heroItem ? (
-            <article className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex flex-col justify-between group">
-              <div>
-                {/* Image Container */}
-                <div className="mb-8">
-                  <Link href={heroItem.href} className="block relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
-                    <Image
-                      src={heroItem.coverImageUrl || "/hero_loreal_gucci.jpg"}
-                      alt={heroItem.title}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 55vw"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                      priority
-                    />
-                  </Link>
-                  <ImageCredit />
-                </div>
-
-                {/* Category & Tags */}
-                <div className="flex flex-wrap gap-3 items-center mb-4">
-                  {heroItem.category && (
-                    <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                      {getTranslatedCategory(heroItem.category)}
-                    </span>
-                  )}
-                  {heroItem.sourceType === "editorpick" && (
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
-                      {"EDITOR'S PICK"}
-                    </span>
-                  )}
-                  {renderTags(heroItem.tags)}
-                </div>
-
-                {/* Title */}
-                <Link href={heroItem.href} className="block">
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
-                    {heroItem.title}
-                  </h1>
-                </Link>
-
-                {/* Summary */}
-                <p className="text-base md:text-lg leading-relaxed text-neutral-600 font-normal max-w-2xl mb-8">
-                  {heroItem.summary}
-                </p>
-              </div>
-            </article>
-          ) : (
-            <div className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
-              No Articles Available
-            </div>
-          )}
-
-          {/* Right Column: 2 Medium Article Cards stacked (col-span-5) */}
-          <div className="lg:col-span-5 lg:pl-12 flex flex-col divide-y divide-neutral-200">
-            {sideItems.length > 0 ? (
-              sideItems.map((item, index) => (
-                <article
-                  key={item.id}
-                  className={`flex flex-col justify-between group ${index === 0 ? "pb-12 lg:pb-16 pt-12 lg:pt-0" : "pt-12 lg:pt-16 pb-12"
-                    }`}
-                >
-                  <div>
-                    {/* Image Container */}
-                    <div className="mb-6">
-                      <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
-                        <Image
-                          src={item.coverImageUrl || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
-                          alt={item.title}
-                          fill
-                          sizes="(max-width: 1024px) 100vw, 40vw"
-                          className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                        />
-                      </Link>
-                      <ImageCredit />
-                    </div>
-
-                    {/* Category & Tags */}
-                    <div className="flex flex-wrap gap-3 items-center mb-3">
-                      {item.category && (
-                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
-                          {getTranslatedCategory(item.category)}
-                        </span>
-                      )}
-                      {item.sourceType === "editorpick" && (
-                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
-                          {"EDITOR'S PICK"}
-                        </span>
-                      )}
-                      {renderTags(item.tags)}
-                    </div>
-
-                    {/* Title */}
-                    <Link href={item.href} className="block">
-                      <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
-                        {item.title}
-                      </h2>
+        {/* 1페이지일 때만 히어로 섹션 렌더링 */}
+        {pageNumber === 1 && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 border-b border-neutral-200">
+            {/* Left Column: Largest Main Article Card (col-span-7) */}
+            {heroItem ? (
+              <article className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex flex-col justify-between group">
+                <div>
+                  <div className="mb-8">
+                    <Link href={heroItem.href} className="block relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
+                      <Image
+                        src={heroItem.coverImageUrl || "/hero_loreal_gucci.jpg"}
+                        alt={heroItem.title}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 55vw"
+                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                        priority
+                      />
                     </Link>
-
-                    {/* Summary */}
-                    <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
-                      {item.summary}
-                    </p>
+                    <ImageCredit />
                   </div>
-                </article>
-              ))
+
+                  <div className="flex flex-wrap gap-3 items-center mb-4">
+                    {heroItem.category && (
+                      <span className="text-xs font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
+                        {getTranslatedCategory(heroItem.category)}
+                      </span>
+                    )}
+                    {heroItem.sourceType === "editorpick" && (
+                      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                        {"EDITOR'S PICK"}
+                      </span>
+                    )}
+                    {renderTags(heroItem.tags)}
+                  </div>
+
+                  <Link href={heroItem.href} className="block">
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1] text-[#111111] mb-6 uppercase group-hover:text-neutral-600 transition-colors">
+                      {heroItem.title}
+                    </h1>
+                  </Link>
+
+                  <p className="text-base md:text-lg leading-relaxed text-neutral-600 font-normal max-w-2xl mb-8">
+                    {heroItem.summary}
+                  </p>
+                </div>
+              </article>
             ) : (
-              <div className="py-12 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
-                No More Articles
+              <div className="lg:col-span-7 lg:pr-12 lg:border-r border-neutral-200 pb-12 lg:pb-20 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
+                No Articles Available
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Remaining Articles Grid */}
-        {extraItems.length > 0 && (
-          <div className="border-t border-neutral-200 pt-16 mt-16">
-            <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 mb-12">
-              {t("archiveMore")}
-            </h3>
+            {/* Right Column: 2 Medium Article Cards stacked (col-span-5) */}
+            <div className="lg:col-span-5 lg:pl-12 flex flex-col divide-y divide-neutral-200">
+              {sideItems.length > 0 ? (
+                sideItems.map((item, index) => (
+                  <article
+                    key={item.id}
+                    className={`flex flex-col justify-between group ${index === 0 ? "pb-12 lg:pb-16 pt-12 lg:pt-0" : "pt-12 lg:pt-16 pb-12"
+                      }`}
+                  >
+                    <div>
+                      <div className="mb-6">
+                        <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
+                          <Image
+                            src={item.coverImageUrl || (index === 0 ? "/hero_modern_art.jpg" : "/hero_minimal_headphones.jpg")}
+                            alt={item.title}
+                            fill
+                            sizes="(max-width: 1024px) 100vw, 40vw"
+                            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                          />
+                        </Link>
+                        <ImageCredit />
+                      </div>
+
+                      <div className="flex flex-wrap gap-3 items-center mb-3">
+                        {item.category && (
+                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
+                            {getTranslatedCategory(item.category)}
+                          </span>
+                        )}
+                        {item.sourceType === "editorpick" && (
+                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white bg-black px-2 py-0.5 border border-black">
+                            {"EDITOR'S PICK"}
+                          </span>
+                        )}
+                        {renderTags(item.tags)}
+                      </div>
+
+                      <Link href={item.href} className="block">
+                        <h2 className="text-xl md:text-2xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
+                          {item.title}
+                        </h2>
+                      </Link>
+
+                      <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
+                        {item.summary}
+                      </p>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="py-12 flex items-center justify-center text-sm font-mono text-neutral-500 uppercase tracking-widest">
+                  No More Articles
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 목록 그리드 */}
+        {extraItems.length > 0 ? (
+          <div className={pageNumber === 1 ? "border-t border-neutral-200 pt-16 mt-16" : ""}>
+            {pageNumber === 1 && (
+              <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 mb-12">
+                {t("archiveMore")}
+              </h3>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
               {extraItems.map((item) => (
                 <article key={item.id} className="flex flex-col justify-between group">
                   <div>
-                    {/* Image Container */}
                     <div className="mb-6">
                       <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
                         <Image
@@ -294,7 +325,6 @@ export default async function Home() {
                       <ImageCredit />
                     </div>
 
-                    {/* Category & Tags */}
                     <div className="flex flex-wrap gap-3 items-center mb-3">
                       {item.category && (
                         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
@@ -309,14 +339,12 @@ export default async function Home() {
                       {renderTags(item.tags)}
                     </div>
 
-                    {/* Title */}
                     <Link href={item.href} className="block">
                       <h3 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
                         {item.title}
                       </h3>
                     </Link>
 
-                    {/* Summary */}
                     <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
                       {item.summary}
                     </p>
@@ -325,41 +353,50 @@ export default async function Home() {
               ))}
             </div>
           </div>
+        ) : (
+          <div className="py-24 text-center border-b border-neutral-200">
+            <p className="text-sm font-mono uppercase text-neutral-400 tracking-wider">
+              {locale === "en" ? "No articles available." : "표시할 기사가 없습니다."}
+            </p>
+          </div>
         )}
 
-        {/* Footer info/Swiss-inspired Grid blocks */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 text-neutral-500 font-mono text-xs">
-          <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot1Title")}</span>
-            {t("foot1Desc")}
-          </div>
-          <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot2Title")}</span>
-            {t("foot2Desc")}
-          </div>
-          <div>
-            <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot3Title")}</span>
-            {t("foot3Desc")}
-          </div>
-        </div>
+        {/* Pagination Controls */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          basePath="/"
+          searchParams={resolvedSearchParams}
+        />
 
+        {/* 1페이지일 때만 에디토리얼 블록 렌더링 */}
+        {pageNumber === 1 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 text-neutral-500 font-mono text-xs">
+            <div>
+              <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot1Title")}</span>
+              {t("foot1Desc")}
+            </div>
+            <div>
+              <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot2Title")}</span>
+              {t("foot2Desc")}
+            </div>
+            <div>
+              <span className="block font-bold text-neutral-900 mb-2 uppercase">{t("foot3Title")}</span>
+              {t("foot3Desc")}
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-neutral-200 py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-6 md:px-12">
-
-          {/* Footer Logo */}
           <div className="mb-12">
             <Link href="/" className="text-3xl font-black tracking-[0.15em] lowercase hover:opacity-80 transition-opacity">
               sightsynch
             </Link>
           </div>
 
-          {/* 6-Column Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-12 md:gap-8 mb-16">
-
-            {/* Column 1: 카테고리 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
                 {t("byCategory")}
@@ -373,7 +410,6 @@ export default async function Home() {
               </ul>
             </div>
 
-            {/* Column 2: 팔로우 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
                 {t("follow")}
@@ -405,7 +441,6 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Column 3: 회사소개 (col-span-1) */}
             <div className="md:col-span-1">
               <h3 className="text-xs font-bold tracking-widest mb-6 text-neutral-900 uppercase">
                 {t("company")}
@@ -418,9 +453,7 @@ export default async function Home() {
               </ul>
             </div>
 
-            {/* Columns 4, 5, 6: 뉴스레터 및 앱 다운로드 (col-span-3) */}
             <div className="md:col-span-3 md:pl-12 flex flex-col justify-between">
-              {/* Newsletter form */}
               <div className="mb-8">
                 <h3 className="text-xs font-bold tracking-widest mb-4 text-neutral-900 uppercase">
                   {t("newsletterTitle")}
@@ -428,17 +461,14 @@ export default async function Home() {
                 <p className="text-xs text-neutral-500 mb-4 leading-relaxed font-medium">
                   {t("newsletterDesc")}
                 </p>
-                {/* Dynamic Newsletter Form component */}
                 <NewsletterForm locale={locale} />
               </div>
 
-              {/* App download buttons */}
               <div>
                 <h4 className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase mb-3.5">
                   DOWNLOAD APP
                 </h4>
                 <div className="flex gap-3">
-                  {/* App Store */}
                   <a
                     href="https://apps.apple.com"
                     target="_blank"
@@ -453,7 +483,6 @@ export default async function Home() {
                     </div>
                   </a>
 
-                  {/* Google Play */}
                   <a
                     href="https://play.google.com"
                     target="_blank"
@@ -469,12 +498,9 @@ export default async function Home() {
                   </a>
                 </div>
               </div>
-
             </div>
-
           </div>
 
-          {/* Bottom Copyright Information */}
           <div className="border-t border-neutral-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-[10px] font-mono text-neutral-500 tracking-wider">
               © 2026 Sightsynch Limited. All Rights Reserved.
@@ -485,7 +511,6 @@ export default async function Home() {
               <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
-
         </div>
       </footer>
     </div>

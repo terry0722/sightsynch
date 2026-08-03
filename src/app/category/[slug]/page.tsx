@@ -2,14 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import Header from "../../../components/Header";
 import NewsletterForm from "../../../components/NewsletterForm";
+import Pagination from "../../../components/Pagination";
 import { pickArticle, getTranslation, type TranslationKey } from "../../../utils/i18n";
 import { CATEGORY_MAP, isValidCategorySlug } from "../../../utils/categories";
 import { getMergedFeed, type FeedItem } from "../../../utils/feed";
 import ImageCredit from "../../../components/ImageCredit";
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 interface Article {
   id: string;
@@ -64,9 +66,34 @@ const MOCK_ARTICLES: Article[] = [
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function CategoryPage({ params }: PageProps) {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const lowerSlug = slug.toLowerCase();
+  const resolvedParams = await searchParams;
+  const pageRaw = resolvedParams.page;
+  const page = Math.max(1, Math.floor(Number(Array.isArray(pageRaw) ? pageRaw[0] : pageRaw) || 1));
+
+  if (!isValidCategorySlug(lowerSlug)) {
+    return { title: "Category Not Found — SIGHTSYNCH" };
+  }
+
+  const map = CATEGORY_MAP[lowerSlug];
+  const baseTitle = `${map.ko} (${map.en}) — SIGHTSYNCH JOURNAL`;
+  const title = page > 1 ? `${baseTitle} — 페이지 ${page}` : baseTitle;
+  const canonicalUrl = page > 1 ? `/category/${lowerSlug}?page=${page}` : `/category/${lowerSlug}`;
+
+  return {
+    title,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+  };
+}
+
+export default async function CategoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const lowerSlug = slug.toLowerCase();
 
@@ -74,21 +101,31 @@ export default async function CategoryPage({ params }: PageProps) {
     notFound();
   }
 
+  const resolvedSearchParams = await searchParams;
+  const pageRaw = resolvedSearchParams.page;
+  const pageNumber = Math.max(1, Math.floor(Number(Array.isArray(pageRaw) ? pageRaw[0] : pageRaw) || 1));
+
   const map = CATEGORY_MAP[lowerSlug];
   const cookieStore = await cookies();
   const locale = cookieStore.get("locale")?.value || "ko";
   const t = getTranslation(locale);
 
   let feedItems: FeedItem[] = [];
+  let totalCount = 0;
+  let totalPages = 1;
+  let currentPage = 1;
 
   try {
-    feedItems = await getMergedFeed({ category: lowerSlug, locale });
+    const feedResult = await getMergedFeed({ category: lowerSlug, page: pageNumber, locale });
+    feedItems = feedResult.items;
+    totalCount = feedResult.totalCount;
+    totalPages = feedResult.totalPages;
+    currentPage = feedResult.currentPage;
   } catch (err) {
     console.error("Failed to load merged feed for category:", err);
   }
 
-  // Fallback if empty
-  if (!feedItems || feedItems.length === 0) {
+  if ((!feedItems || feedItems.length === 0) && pageNumber === 1 && totalCount === 0) {
     const mockNorm = MOCK_ARTICLES
       .filter(a => a.category === map.ko || a.category.toLowerCase() === lowerSlug)
       .map((art) => {
@@ -106,6 +143,12 @@ export default async function CategoryPage({ params }: PageProps) {
         };
       });
     feedItems = mockNorm;
+    totalCount = feedItems.length;
+    totalPages = 1;
+  }
+
+  if (pageNumber > totalPages) {
+    notFound();
   }
 
   const renderTags = (tags: string | string[] | null | undefined) => {
@@ -143,17 +186,16 @@ export default async function CategoryPage({ params }: PageProps) {
       <Header />
 
       <main className="max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20">
-        
         {/* Editorial Subheader */}
         <div className="flex justify-between items-end border-b border-neutral-200 pb-4 mb-12">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 hover:text-black transition-colors"
           >
             {t("backToHome")}
           </Link>
           <div className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500">
-            SIGHTSYNCH JOURNAL — {categoryHeaderTitle}
+            SIGHTSYNCH JOURNAL — {categoryHeaderTitle} {pageNumber > 1 ? `(PAGE ${pageNumber})` : ""}
           </div>
         </div>
 
@@ -173,7 +215,6 @@ export default async function CategoryPage({ params }: PageProps) {
             {feedItems.map((item) => (
               <article key={item.id} className="flex flex-col justify-between group">
                 <div>
-                  {/* Image Container */}
                   <div className="mb-6">
                     <Link href={item.href} className="block relative aspect-[3/2] w-full overflow-hidden bg-neutral-100 border border-neutral-200">
                       <Image
@@ -187,7 +228,6 @@ export default async function CategoryPage({ params }: PageProps) {
                     <ImageCredit />
                   </div>
 
-                  {/* Category & Tags */}
                   <div className="flex flex-wrap gap-3 items-center mb-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-900 border border-neutral-900 px-2 py-0.5">
                       {getTranslatedCategory(item.category)}
@@ -200,14 +240,12 @@ export default async function CategoryPage({ params }: PageProps) {
                     {renderTags(item.tags)}
                   </div>
 
-                  {/* Title */}
                   <Link href={item.href} className="block">
                     <h2 className="text-xl font-black tracking-tight leading-[1.2] text-[#111111] mb-3 uppercase group-hover:text-neutral-600 transition-colors">
                       {item.title}
                     </h2>
                   </Link>
 
-                  {/* Summary */}
                   <p className="text-sm leading-relaxed text-neutral-600 font-normal mb-6">
                     {item.summary}
                   </p>
@@ -223,12 +261,17 @@ export default async function CategoryPage({ params }: PageProps) {
           </div>
         )}
 
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          basePath={`/category/${lowerSlug}`}
+          searchParams={resolvedSearchParams}
+        />
       </main>
 
-      {/* Global Footer */}
       <footer className="bg-white border-t border-neutral-200 py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-6 md:px-12">
-          
           <div className="mb-12">
             <Link href="/" className="text-3xl font-black tracking-[0.15em] lowercase hover:opacity-80 transition-opacity">
               sightsynch
@@ -299,7 +342,6 @@ export default async function CategoryPage({ params }: PageProps) {
               <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
-
         </div>
       </footer>
     </div>

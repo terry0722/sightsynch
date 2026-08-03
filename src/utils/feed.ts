@@ -1,6 +1,7 @@
 import { createClient } from "./supabase/server";
 import { pickArticle } from "./i18n";
 import { CATEGORY_MAP } from "./categories";
+import { ARTICLES_PER_PAGE } from "../lib/constants";
 
 export interface FeedItem {
   id: string;
@@ -15,37 +16,69 @@ export interface FeedItem {
   authorName?: string;
 }
 
-export async function getMergedFeed(options: {
+export interface GetMergedFeedOptions {
   category?: string;
+  page?: number;
   limit?: number;
   locale?: string;
-} = {}): Promise<FeedItem[]> {
-  const { category, limit = 50, locale = "ko" } = options;
-  
-  let articlesQuery = null;
-  let picksQuery = null;
+}
 
+export interface MergedFeedResult {
+  items: FeedItem[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export async function getMergedFeed(options: GetMergedFeedOptions = {}): Promise<MergedFeedResult> {
+  const { category, page = 1, limit = ARTICLES_PER_PAGE, locale = "ko" } = options;
+  const currentPage = Math.max(1, Math.floor(Number(page) || 1));
+  const perPage = limit > 0 ? limit : ARTICLES_PER_PAGE;
+  
   try {
     const supabase = await createClient();
-    articlesQuery = supabase.from("articles").select("*");
-    picksQuery = supabase.from("editor_picks").select("*").eq("status", "published");
+    let articlesQuery = supabase.from("articles").select("*", { count: "exact" });
+    let picksQuery = supabase.from("editor_picks").select("*", { count: "exact" }).eq("status", "published");
 
     if (category) {
       const map = CATEGORY_MAP[category as keyof typeof CATEGORY_MAP];
+      const rawCat = category.trim();
+      let rawAccepted: string[] = [];
       if (map) {
-        const accepted = [map.ko, map.en, category];
-        articlesQuery = articlesQuery.in("category", accepted);
-        picksQuery = picksQuery.in("category", accepted);
+        rawAccepted = [map.ko, map.en, category, rawCat];
       } else {
-        articlesQuery = articlesQuery.eq("category", category);
-        picksQuery = picksQuery.eq("category", category);
+        rawAccepted = [category, rawCat];
       }
+      const acceptedSet = new Set<string>();
+      rawAccepted.forEach((item) => {
+        if (!item) return;
+        acceptedSet.add(item);
+        acceptedSet.add(` ${item}`);
+        acceptedSet.add(`${item} `);
+        acceptedSet.add(` ${item} `);
+      });
+      const accepted = Array.from(acceptedSet);
+      articlesQuery = articlesQuery.in("category", accepted);
+      picksQuery = picksQuery.in("category", accepted);
     }
 
+    const fetchLimit = Math.min(currentPage * perPage, 2000);
+
     const [articlesRes, picksRes] = await Promise.all([
-      articlesQuery.order("created_at", { ascending: false }).limit(limit),
-      picksQuery.order("published_at", { ascending: false }).limit(limit)
+      articlesQuery
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(0, fetchLimit - 1),
+      picksQuery
+        .order("published_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(0, fetchLimit - 1)
     ]);
+
+    const totalArticles = articlesRes.count || 0;
+    const totalPicks = picksRes.count || 0;
+    const totalCount = totalArticles + totalPicks;
+    const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
 
     const articlesData = articlesRes.data || [];
     const picksData = picksRes.data || [];
@@ -82,14 +115,32 @@ export async function getMergedFeed(options: {
       };
     });
 
-    // Combine and sort
+    // Combine and sort deterministically (date DESC, id DESC)
     const combined = [...normArticles, ...normPicks].sort((a, b) => {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return b.id.localeCompare(a.id);
     });
 
-    return combined.slice(0, limit);
+    const offset = (currentPage - 1) * perPage;
+    const items = combined.slice(offset, offset + perPage);
+
+    return {
+      items,
+      totalCount,
+      totalPages,
+      currentPage
+    };
   } catch (err) {
     console.error("Error generating merged feed:", err);
-    return [];
+    return {
+      items: [],
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1
+    };
   }
 }
