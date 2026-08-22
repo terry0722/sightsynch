@@ -137,9 +137,8 @@ export default async function PrivacyPage() {
                 7. 개인정보 보호책임자
               </h2>
               <div className="bg-neutral-50 dark:bg-neutral-900/60 p-4 border border-neutral-200 dark:border-neutral-800 text-xs font-mono space-y-1.5 text-neutral-700 dark:text-neutral-300">
-                <p>성명: SIGHTSYNCH 개인정보보호책임자</p>
-                <p>이메일: privacy@sightsynch.com</p>
-                <p>문의: 이메일 문의 접수</p>
+                <p>성명: 유정태</p>
+                <p>이메일: ps105ps@gmail.com</p>
               </div>
             </section>
 
@@ -148,7 +147,7 @@ export default async function PrivacyPage() {
                 8. 시행일자
               </h2>
               <p className="text-neutral-600 dark:text-neutral-400">
-                본 개인정보처리방침은 2026년 8월 22일부터 시행됩니다.
+                본 개인정보처리방침은 2026-08-01부터 시행됩니다.
               </p>
             </section>
           </article>
