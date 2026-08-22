@@ -207,9 +207,9 @@ export default async function MyPage() {
               © 2026 Sightsynch Limited. All Rights Reserved.
             </p>
             <div className="flex gap-4 text-[10px] font-medium text-neutral-500 tracking-wider">
-              <Link href="/#terms" className="hover:text-black transition-colors">{t("terms")}</Link>
+              <Link href="/terms" className="hover:text-black transition-colors">{t("terms")}</Link>
               <span>|</span>
-              <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
+              <Link href="/privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
 

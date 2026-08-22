@@ -209,10 +209,11 @@ export default async function EditorPicksPage() {
                 {t("company")}
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
+                <li><Link href="/about" className="hover:text-black transition-colors">{t("about")}</Link></li>
                 <li><Link href="/#newsroom" className="hover:text-black transition-colors">{t("newsroom")}</Link></li>
                 <li><Link href="/#careers" className="hover:text-black transition-colors">{t("careers")}</Link></li>
                 <li><Link href="/#partnership" className="hover:text-black transition-colors">{t("partnership")}</Link></li>
-                <li><Link href="/#contact" className="hover:text-black transition-colors">{t("contact")}</Link></li>
+                <li><Link href="/contact" className="hover:text-black transition-colors">{t("contact")}</Link></li>
               </ul>
             </div>
 
@@ -234,9 +235,9 @@ export default async function EditorPicksPage() {
               © 2026 Sightsynch Limited. All Rights Reserved.
             </p>
             <div className="flex gap-4 text-[10px] font-medium text-neutral-500 tracking-wider">
-              <Link href="/#terms" className="hover:text-black transition-colors">{t("terms")}</Link>
+              <Link href="/terms" className="hover:text-black transition-colors">{t("terms")}</Link>
               <span>|</span>
-              <Link href="/#privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
+              <Link href="/privacy" className="hover:text-black transition-colors">{t("privacy")}</Link>
             </div>
           </div>
 
