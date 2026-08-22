@@ -315,8 +315,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
                 <li><Link href="/about" className="hover:text-black transition-colors">{t("about")}</Link></li>
-                <li><Link href="/#newsroom" className="hover:text-black transition-colors">{t("newsroom")}</Link></li>
-                <li><Link href="/#careers" className="hover:text-black transition-colors">{t("careers")}</Link></li>
+
                 <li><Link href="/#partnership" className="hover:text-black transition-colors">{t("partnership")}</Link></li>
                 <li><Link href="/contact" className="hover:text-black transition-colors">{t("contact")}</Link></li>
               </ul>
