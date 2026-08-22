@@ -46,7 +46,7 @@ export default async function TermsPage() {
                 제1조 (목적)
               </h2>
               <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                본 약관은 SIGHTSYNCH(이하 &quot;회사&quot;)가 운영하는 SIGHTSYNCH(이하 &quot;서비스&quot;)의 이용조건 및 절차, 이용자와 회사의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
+                본 약관은 SIGHTSYNCH(이하 &quot;sightsynch&quot;)가 운영하는 SIGHTSYNCH(이하 &quot;News&quot;)의 이용조건 및 절차, 이용자와 회사의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
               </p>
             </section>
 
@@ -100,7 +100,7 @@ export default async function TermsPage() {
                 제7조 (문의)
               </h2>
               <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                서비스 이용 관련 문의는 support@sightsynch.com으로 접수해 주시기 바랍니다.
+                서비스 이용 관련 문의는 ps105ps@gmail.com으로 접수해 주시기 바랍니다.
               </p>
             </section>
 
@@ -109,7 +109,7 @@ export default async function TermsPage() {
                 부칙
               </h2>
               <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                본 약관은 2026년 8월 22일부터 시행됩니다.
+                본 약관은 2026-08-01부터 시행됩니다.
               </p>
             </section>
           </article>
