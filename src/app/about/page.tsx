@@ -42,27 +42,16 @@ export default async function AboutPage() {
           {/* About Body */}
           <article className="prose prose-neutral dark:prose-invert max-w-none text-sm md:text-base leading-relaxed space-y-8">
             <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium">
-              SIGHTSYNCH는 패션, 예술, 테크, 라이프스타일 전반을 다루는 글로벌 에디토리얼 매거진입니다.
+              SIGHTSYNCH는 패션, 예술, 테크, 라이프스타일 전반을 다루는 에디토리얼 매거진입니다.<br />
+              2026년 6월부터 &quot;매일 아침 관심사 뉴스를 보기 위해 시작, 아침에 뇌를 깨우는 뉴스를 3-5개 읽으며 하루를 시작하자&quot;는 철학을 바탕으로 운영되고 있습니다.
             </p>
-
-            <section className="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-900">
-              <h2 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-                우리의 비전과 철학
-              </h2>
-              <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                2026년에 시작된 SIGHTSYNCH는 현대 문화의 가장 아름답고 혁신적인 순간들을 포착하여 독자들에게 전달합니다.
-                우리는 단순한 트렌드 리포팅을 넘어, 심층적인 시각(SIGHT)과 시대 정신의 동기화(SYNCH)를 추구하며,
-                독창적이고 깊이 있는 럭셔리 미학을 제안합니다.
-              </p>
-            </section>
 
             <section className="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-900">
               <h2 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
                 연락처
               </h2>
               <div className="bg-neutral-50 dark:bg-neutral-900/60 p-4 border border-neutral-200 dark:border-neutral-800 text-sm font-mono space-y-2 text-neutral-700 dark:text-neutral-300">
-                <p><span className="font-semibold text-neutral-900 dark:text-neutral-100">제휴 및 문의:</span> support@sightsynch.com</p>
-                <p><span className="font-semibold text-neutral-900 dark:text-neutral-100">주소:</span> 대한민국 서울특별시 강남구</p>
+                <p><span className="font-semibold text-neutral-900 dark:text-neutral-100">제휴 및 문의:</span> ps105ps@gmail.com</p>
               </div>
             </section>
           </article>
