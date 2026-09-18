@@ -110,8 +110,7 @@ export default async function AboutPage() {
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 dark:text-neutral-400 font-medium">
                 <li><Link href="/about" className="hover:text-black dark:hover:text-white transition-colors">{t("about")}</Link></li>
-
-                <li><Link href="/#partnership" className="hover:text-black dark:hover:text-white transition-colors">{t("partnership")}</Link></li>
+                <li><Link href="/contact" className="hover:text-black dark:hover:text-white transition-colors">{t("partnership")}</Link></li>
                 <li><Link href="/contact" className="hover:text-black dark:hover:text-white transition-colors">{t("contact")}</Link></li>
               </ul>
             </div>

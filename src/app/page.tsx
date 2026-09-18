@@ -437,8 +437,7 @@ export default async function Home({ searchParams }: PageProps) {
               </h3>
               <ul className="space-y-3.5 text-xs text-neutral-600 font-medium">
                 <li><Link href="/about" className="hover:text-black transition-colors">{t("about")}</Link></li>
-
-                <li><Link href="/#partnership" className="hover:text-black transition-colors">{t("partnership")}</Link></li>
+                <li><Link href="/contact" className="hover:text-black transition-colors">{t("partnership")}</Link></li>
                 <li><Link href="/contact" className="hover:text-black transition-colors">{t("contact")}</Link></li>
               </ul>
             </div>
@@ -452,41 +451,6 @@ export default async function Home({ searchParams }: PageProps) {
                   {t("newsletterDesc")}
                 </p>
                 <NewsletterForm locale={locale} />
-              </div>
-
-              <div>
-                <h4 className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase mb-3.5">
-                  DOWNLOAD APP
-                </h4>
-                <div className="flex gap-3">
-                  <a
-                    href="https://apps.apple.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 border border-neutral-300 px-4 py-2 hover:bg-neutral-50 hover:border-black transition-all"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.58 2.95-1.39" />
-                    </svg>
-                    <div className="text-[10px] font-bold text-left leading-none tracking-wider">
-                      App Store
-                    </div>
-                  </a>
-
-                  <a
-                    href="https://play.google.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 border border-neutral-300 px-4 py-2 hover:bg-neutral-50 hover:border-black transition-all"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5.25 2.04c-.22.22-.35.56-.35.97v17.98c0 .41.13.75.35.97l.07.07L15.4 11.96v-.12L5.32 1.97l-.07.07zm11.1 7.82l-2.91-2.91L5.6 1.94c.32-.09.73-.05 1.08.15l10.96 6.32c.57.33.87.79.87 1.24s-.3 1.01-.87 1.34l-1.3.75-2.07-2.07v-.12zm-3.03 3.03l3.03 3.03c.57.33.87.79.87 1.24s-.3.91-.87 1.24L6.68 21.91c-.35.2-.76.24-1.08.15l7.84-7.84 2.87-2.87z" />
-                    </svg>
-                    <div className="text-[10px] font-bold text-left leading-none tracking-wider">
-                      Google Play
-                    </div>
-                  </a>
-                </div>
               </div>
             </div>
           </div>
